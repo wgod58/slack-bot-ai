@@ -1,0 +1,21 @@
+{
+  "name": "slack-ai-bot",
+  "version": "1.0.0",
+  "description": "Slack bot with OpenAI and RAG integration",
+  "type": "module",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@pinecone-database/pinecone": "^2.2.2",
+    "@slack/bolt": "^3.17.0",
+    "dotenv": "^16.4.1",
+    "express": "^4.18.2",
+    "openai": "^4.28.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
