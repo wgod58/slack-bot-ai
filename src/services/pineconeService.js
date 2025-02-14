@@ -1,25 +1,26 @@
-import pkg from "@pinecone-database/pinecone";
-const { Pinecone } = pkg;
-import { createEmbedding } from "./openaiService.js";
+import { Pinecone } from '@pinecone-database/pinecone';
+
+import { PINECONE_CONFIG } from '../constants/config.js';
+import { createEmbedding } from './openaiService.js';
 
 const pinecone = new Pinecone({
-  apiKey: process.env.PINECONE_API_KEY,
+  apiKey: PINECONE_CONFIG.API_KEY,
 });
 
 // Initialize index
-const INDEX_NAME = "slack-bot";
+const INDEX_NAME = 'slack-bot';
 
 async function initIndex() {
   try {
     // List existing indexes
     const indexes = await pinecone.listIndexes();
-    console.log("indexes", indexes);
+    console.log('indexes', indexes);
 
     const index = pinecone.Index(INDEX_NAME);
-    console.log("Pinecone index initialized:", INDEX_NAME);
+    console.log('Pinecone index initialized:', INDEX_NAME);
     return index;
   } catch (error) {
-    console.error("Error initializing Pinecone index:", error);
+    console.error('Error initializing Pinecone index:', error);
     throw error;
   }
 }
@@ -41,14 +42,14 @@ async function storeQuestionAndResponse(question, response) {
           question,
           response,
           timestamp: new Date().toISOString(),
-          type: "qa_pair",
+          type: 'qa_pair',
         },
       },
     ]);
 
-    console.log("Stored Q&A pair in Pinecone");
+    console.log('Stored Q&A pair in Pinecone');
   } catch (error) {
-    console.error("Error storing in Pinecone:", error);
+    console.error('Error storing in Pinecone:', error);
     throw error;
   }
 }
@@ -71,9 +72,9 @@ async function findSimilarQuestions(question, limit = 5) {
       score: match.score,
     }));
   } catch (error) {
-    console.error("Error querying Pinecone:", error);
+    console.error('Error querying Pinecone:', error);
     throw error;
   }
 }
 
-export { pinecone, initIndex, storeQuestionAndResponse, findSimilarQuestions };
+export { findSimilarQuestions, initIndex, pinecone, storeQuestionAndResponse };
