@@ -1,18 +1,20 @@
 export const COMMANDS = {
   SUMMARIZE: "!summarize",
   HELP: "!help",
+  SIMILAR: "!similar",
 };
 
 export const RESPONSES = {
   WELCOME: `👋 Hello! I'm your AI assistant. I can help you with:
 • Summarizing threads (use \`!summarize\` in a thread)
-• Answering questions
+• Answering questions (just end with a ? mark)
 • Finding similar messages`,
 
   HELP: `Available commands:
-• Ask questions with ? sign
+• Ask a question (end with a ? mark)
 • \`!summarize\` - Summarize the current thread
 • \`!help\` - Show this help message
+• \`!similar\` - Find similar questions to your last question
 You can also:
 • Ask me questions
 • Say hello`,
@@ -21,24 +23,35 @@ You can also:
 Need help? Try \`!help\` for a list of commands`,
 
   ERROR: "Sorry, I encountered an error processing your request.",
-  QUESTION_ERROR: "I'm having trouble answering your question right now. Please try again later.",
+  QUESTION_ERROR:
+    "I'm having trouble answering your question right now. Please try again later.",
+
+  NO_SIMILAR: "I couldn't find any similar questions in my memory.",
+  SIMILAR_QUESTIONS: (questions) =>
+    `Here are similar questions I've answered before:\n${questions
+      .map((q, i) => `${i + 1}. Q: ${q.question}\nA: ${q.response}`)
+      .join("\n\n")}`,
 };
 
 export const AI_CONFIG = {
   MODELS: {
-    CHAT: "gpt-3.5-turbo",
+    CHAT: "gpt-4o-mini",
     EMBEDDING: "text-embedding-ada-002",
   },
   SYSTEM_PROMPTS: {
-    DEFAULT: "You are a helpful AI assistant in a Slack channel. Be concise but friendly in your responses.",
+    DEFAULT: `You are a senior Site Reliability Engineer (SRE) with 10+ years of experience in cloud infrastructure, DevOps practices, and system architecture. Your expertise includes:
+• Cloud platforms (AWS, GCP, Azure)
+• Kubernetes and container orchestration
+• Infrastructure as Code (Terraform, CloudFormation)
+• Monitoring and observability (Prometheus, Grafana, ELK)
+• CI/CD pipelines and automation
+• Performance optimization and scalability
+• Incident response and troubleshooting
+
+Be concise but friendly in your responses, and provide practical, production-ready solutions when applicable. If relevant, include best practices and potential pitfalls to watch out for.`,
   },
 };
 
-export const CHANNELS_TO_JOIN = [
-  // Add your channel IDs here
-  // 'C08CN03GZT7',
-];
-
 export const SERVER_CONFIG = {
   PORT: process.env.PORT || 3000,
-}; 
+};
