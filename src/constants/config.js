@@ -1,7 +1,6 @@
 export const COMMANDS = {
-  SUMMARIZE: "!summarize",
-  HELP: "!help",
-  SIMILAR: "!similar",
+  SUMMARIZE: '!summarize',
+  HELP: '!help',
 };
 
 export const RESPONSES = {
@@ -14,29 +13,25 @@ export const RESPONSES = {
 • Ask a question (end with a ? mark)
 • \`!summarize\` - Summarize the current thread
 • \`!help\` - Show this help message
-• \`!similar\` - Find similar questions to your last question
-You can also:
-• Ask me questions
 • Say hello`,
 
   DEFAULT: (text) => `I received your message: "${text}"
 Need help? Try \`!help\` for a list of commands`,
 
-  ERROR: "Sorry, I encountered an error processing your request.",
-  QUESTION_ERROR:
-    "I'm having trouble answering your question right now. Please try again later.",
+  ERROR: 'Sorry, I encountered an error processing your request.',
+  QUESTION_ERROR: "I'm having trouble answering your question right now. Please try again later.",
 
   NO_SIMILAR: "I couldn't find any similar questions in my memory.",
   SIMILAR_QUESTIONS: (questions) =>
     `Here are similar questions I've answered before:\n${questions
       .map((q, i) => `${i + 1}. Q: ${q.question}\nA: ${q.response}`)
-      .join("\n\n")}`,
+      .join('\n\n')}`,
 };
 
 export const AI_CONFIG = {
   MODELS: {
-    CHAT: "gpt-4o-mini",
-    EMBEDDING: "text-embedding-ada-002",
+    CHAT: 'gpt-4-turbo',
+    EMBEDDING: 'text-embedding-3-small',
   },
   SYSTEM_PROMPTS: {
     DEFAULT: `You are a senior Site Reliability Engineer (SRE) with 10+ years of experience in cloud infrastructure, DevOps practices, and system architecture. Your expertise includes:
@@ -50,6 +45,17 @@ export const AI_CONFIG = {
 
 Be concise but friendly in your responses, and provide practical, production-ready solutions when applicable. If relevant, include best practices and potential pitfalls to watch out for.`,
   },
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+};
+
+export const SLACK_CONFIG = {
+  BOT_TOKEN: process.env.SLACK_BOT_TOKEN,
+  SIGNING_SECRET: process.env.SLACK_SIGNING_SECRET,
+  APP_TOKEN: process.env.SLACK_APP_TOKEN,
+};
+
+export const PINECONE_CONFIG = {
+  API_KEY: process.env.PINECONE_API_KEY,
 };
 
 export const SERVER_CONFIG = {
