@@ -7,17 +7,13 @@ import {
 } from "./src/services/slackService.js";
 import apiRouter from "./src/routes/api.js";
 import { initIndex } from "./src/services/pineconeService.js";
+import { CHANNELS_TO_JOIN, SERVER_CONFIG } from "./src/constants/config.js";
 
 const server = express();
 server.use(express.json());
 
 // Setup routes
 server.use("/api", apiRouter);
-
-// Channels the bot should join
-const CHANNELS_TO_JOIN = [
-  // 'C08CN03GZT7', // Commented out for testing
-];
 
 // Start both Express and Slack app
 async function startServer() {
@@ -43,7 +39,6 @@ async function startServer() {
           error: channelError.message,
           data: channelError.data,
         });
-        // Continue with other channels even if one fails
         continue;
       }
     }
@@ -53,9 +48,8 @@ async function startServer() {
     await setupSlackListeners();
 
     // Start Express server
-    const port = process.env.PORT || 3000;
-    server.listen(port, () => {
-      console.log(`🚀 Express server is running on port ${port}`);
+    server.listen(SERVER_CONFIG.PORT, () => {
+      console.log(`🚀 Express server is running on port ${SERVER_CONFIG.PORT}`);
     });
   } catch (error) {
     console.error("Startup Error:", {

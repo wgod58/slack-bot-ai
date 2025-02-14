@@ -1,6 +1,7 @@
 import pkg from "@slack/bolt";
 const { App } = pkg;
 import { generateResponse, generateSummary } from "./openaiService.js";
+import { COMMANDS, RESPONSES } from "../constants/config.js";
 
 // Log environment variables (without the actual values)
 console.log("Environment variables loaded:", {
@@ -15,30 +16,6 @@ const slackBot = new App({
   socketMode: true,
   appToken: process.env.SLACK_APP_TOKEN,
 });
-
-// Add these helper functions at the top of the file
-const COMMANDS = {
-  SUMMARIZE: "!summarize",
-  HELP: "!help",
-};
-
-const RESPONSES = {
-  WELCOME: `👋 Hello! I'm your AI assistant. I can help you with:
-• Summarizing threads (use \`!summarize\` in a thread)
-• Answering questions
-• Finding similar messages`,
-
-  HELP: `Available commands:
-• Ask questions with ? sign
-• \`!summarize\` - Summarize the current thread
-• \`!help\` - Show this help message
-You can also:
-• Ask me questions
-• Say hello`,
-
-  DEFAULT: (text) => `I received your message: "${text}"
-Need help? Try \`!help\` for a list of commands`,
-};
 
 export async function getThreadMessages(channel, threadTs) {
   const threadMessages = await slackBot.client.conversations.replies({
@@ -120,7 +97,7 @@ export async function setupSlackListeners() {
         } catch (error) {
           console.error("Error generating response:", error);
           await say({
-            text: "I'm having trouble answering your question right now. Please try again later.",
+            text: RESPONSES.QUESTION_ERROR,
             thread_ts: message.thread_ts || message.ts,
           });
         }
@@ -139,7 +116,7 @@ export async function setupSlackListeners() {
         stack: error.stack,
       });
       await say({
-        text: "Sorry, I encountered an error processing your request.",
+        text: RESPONSES.ERROR,
         thread_ts: message.thread_ts || message.ts,
       });
     }

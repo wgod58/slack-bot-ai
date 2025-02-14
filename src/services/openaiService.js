@@ -1,5 +1,6 @@
 import OpenAIPackage from "openai";
 const { OpenAI } = OpenAIPackage;
+import { AI_CONFIG } from "../constants/config.js";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -10,7 +11,7 @@ export async function generateSummary(messages) {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: AI_CONFIG.MODELS.CHAT,
       messages: [{ role: "user", content: prompt }],
     });
 
@@ -27,14 +28,12 @@ export async function generateSummary(messages) {
 
 export async function generateResponse(question) {
   try {
-    console.log("Generating response for question:", question);
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: AI_CONFIG.MODELS.CHAT,
       messages: [
         {
           role: "system",
-          content:
-            "You are a helpful AI assistant in a Slack channel. Be concise but friendly in your responses.",
+          content: AI_CONFIG.SYSTEM_PROMPTS.DEFAULT,
         },
         {
           role: "user",
@@ -57,7 +56,7 @@ export async function generateResponse(question) {
 export async function createEmbedding(text) {
   try {
     const response = await openai.embeddings.create({
-      model: "text-embedding-ada-002",
+      model: AI_CONFIG.MODELS.EMBEDDING,
       input: text,
     });
 
