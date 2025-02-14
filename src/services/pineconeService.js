@@ -1,83 +1,73 @@
 import pkg from "@pinecone-database/pinecone";
 const { Pinecone } = pkg;
+import { createEmbedding } from "./openaiService.js";
 
 const pinecone = new Pinecone({
   apiKey: process.env.PINECONE_API_KEY,
 });
 
 // Initialize index
-const INDEX_NAME = "slack-bot"; // You'll create this in Pinecone dashboard
+const INDEX_NAME = "slack-bot";
 
 async function initIndex() {
   try {
     // List existing indexes
     const indexes = await pinecone.listIndexes();
-    console.log(
-      "have index",
-      indexes.indexes.some((index) => index.name === INDEX_NAME)
-    );
+    console.log("indexes", indexes);
 
-    // Check if our index exists
-    // const indexExists = indexes.some((index) => index.name === INDEX_NAME);
-
-    // if (!indexExists) {
-    //   // Create index if it doesn't exist
-    //   await pinecone.createIndex({
-    //     name: INDEX_NAME,
-    //     dimension: 1536, // OpenAI embeddings dimension
-    //     metric: "cosine",
-    //   });
-    //   console.log(`Created new index: ${INDEX_NAME}`);
-    // }
-
-    // Get the index instance
-    // const index = pinecone.Index(INDEX_NAME);
-    // console.log("Pinecone index initialized:", INDEX_NAME);
-    // return index;
+    const index = pinecone.Index(INDEX_NAME);
+    console.log("Pinecone index initialized:", INDEX_NAME);
+    return index;
   } catch (error) {
     console.error("Error initializing Pinecone index:", error);
     throw error;
   }
 }
 
-// Function to upsert messages to Pinecone
-async function upsertMessages(index, messages) {
+// Store question and response in Pinecone
+async function storeQuestionAndResponse(question, response) {
   try {
-    const vectors = await Promise.all(
-      messages.map(async (message, i) => {
-        // Create embedding using OpenAI
-        const embedding = await createEmbedding(message);
-        return {
-          id: `msg_${Date.now()}_${i}`,
-          values: embedding,
-          metadata: {
-            text: message,
-            timestamp: Date.now(),
-          },
-        };
-      })
-    );
+    const index = pinecone.Index(INDEX_NAME);
 
-    await index.upsert(vectors);
-    console.log(`Upserted ${vectors.length} messages to Pinecone`);
+    // Create embedding for the question
+    const questionEmbedding = await createEmbedding(question);
+
+    // Store in Pinecone
+    await index.upsert([
+      {
+        id: `qa_${Date.now()}`,
+        values: questionEmbedding,
+        metadata: {
+          question,
+          response,
+          timestamp: new Date().toISOString(),
+          type: "qa_pair",
+        },
+      },
+    ]);
+
+    console.log("Stored Q&A pair in Pinecone");
   } catch (error) {
-    console.error("Error upserting to Pinecone:", error);
+    console.error("Error storing in Pinecone:", error);
     throw error;
   }
 }
 
-// Function to query similar messages
-async function querySimilar(index, query, topK = 5) {
+// Find similar questions
+async function findSimilarQuestions(question, limit = 5) {
   try {
-    const queryEmbedding = await createEmbedding(query);
-    const results = await index.query({
-      vector: queryEmbedding,
-      topK,
+    const index = pinecone.Index(INDEX_NAME);
+    const questionEmbedding = await createEmbedding(question);
+
+    const queryResponse = await index.query({
+      vector: questionEmbedding,
+      topK: limit,
       includeMetadata: true,
     });
 
-    return results.matches.map((match) => ({
-      text: match.metadata.text,
+    return queryResponse.matches.map((match) => ({
+      question: match.metadata.question,
+      response: match.metadata.response,
       score: match.score,
     }));
   } catch (error) {
@@ -86,11 +76,4 @@ async function querySimilar(index, query, topK = 5) {
   }
 }
 
-// Helper function to create embeddings using OpenAI
-async function createEmbedding(text) {
-  // Note: You'll need to implement this using OpenAI's embedding API
-  // We'll implement this in the next step
-  throw new Error("Not implemented yet");
-}
-
-export { pinecone, initIndex, upsertMessages, querySimilar };
+export { pinecone, initIndex, storeQuestionAndResponse, findSimilarQuestions };
