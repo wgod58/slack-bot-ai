@@ -5,7 +5,7 @@ yarn.lock
 
 # Environment variables
 .env
-*.env
+# *.env
 .env.local
 .env.*.local
 .env.development
@@ -82,4 +82,3 @@ out/
 # Backup files that might contain secrets
 *.bak
 *.swp
-*.env.* 

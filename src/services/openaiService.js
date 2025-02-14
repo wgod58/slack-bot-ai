@@ -6,7 +6,7 @@ const openai = new OpenAI({
 });
 
 export async function generateSummary(messages) {
-  const prompt = `Please summarize this conversation:\n${messages.join("\n")}`;
+  const prompt = `Please summarize this conversation:\n${messages.join("")}`;
 
   try {
     const completion = await openai.chat.completions.create({

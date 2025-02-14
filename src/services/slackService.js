@@ -6,7 +6,7 @@ import { generateResponse, generateSummary } from "./openaiService.js";
 console.log("Environment variables loaded:", {
   SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN ? "✓" : "✗",
   SLACK_SIGNING_SECRET: process.env.SLACK_SIGNING_SECRET ? "✓" : "✗",
-  SLACK_APP_TOKEN: process.env.SLACK_APP_TOKEN ? "✓" : "✗"
+  SLACK_APP_TOKEN: process.env.SLACK_APP_TOKEN ? "✓" : "✗",
 });
 
 const slackBot = new App({
@@ -29,6 +29,7 @@ const RESPONSES = {
 • Finding similar messages`,
 
   HELP: `Available commands:
+• Ask questions with ? sign
 • \`!summarize\` - Summarize the current thread
 • \`!help\` - Show this help message
 You can also:
@@ -86,7 +87,7 @@ export async function setupSlackListeners() {
       if (text.includes(COMMANDS.SUMMARIZE)) {
         const messages = await getThreadMessages(
           message.channel,
-          message.thread_ts || message.ts
+          message.thread_ts || message.ts,
         );
 
         const summary = await generateSummary(messages);
@@ -151,7 +152,7 @@ export async function setupSlackListeners() {
       if (event.reaction === "summary") {
         const messages = await getThreadMessages(
           event.item.channel,
-          event.item.ts
+          event.item.ts,
         );
 
         const summary = await generateSummary(messages);
