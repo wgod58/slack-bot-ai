@@ -1,13 +1,9 @@
 import "dotenv/config";
 import express from "express";
-import {
-  slackBot,
-  setupSlackListeners,
-  joinChannel,
-} from "./src/services/slackService.js";
+import { slackBot, setupSlackListeners } from "./src/services/slackService.js";
 import apiRouter from "./src/routes/api.js";
 import { initIndex } from "./src/services/pineconeService.js";
-import { CHANNELS_TO_JOIN, SERVER_CONFIG } from "./src/constants/config.js";
+import { SERVER_CONFIG } from "./src/constants/config.js";
 
 const server = express();
 server.use(express.json());
@@ -22,26 +18,13 @@ async function startServer() {
 
     // Initialize Pinecone
     console.log("Initializing Pinecone...");
-    await initIndex();
+    const index = await initIndex();
+    global.pineconeIndex = index; // Store for global access if needed
 
     // Start Slack bot
     console.log("Starting Slack bot...");
     await slackBot.start();
     console.log("⚡️ Slack bot is running!");
-
-    // Join channels one by one with error handling
-    console.log("Attempting to join channels...");
-    for (const channelId of CHANNELS_TO_JOIN) {
-      try {
-        await joinChannel(channelId);
-      } catch (channelError) {
-        console.error(`Failed to join channel ${channelId}:`, {
-          error: channelError.message,
-          data: channelError.data,
-        });
-        continue;
-      }
-    }
 
     // Setup listeners
     console.log("Setting up Slack listeners...");
