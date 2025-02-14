@@ -2,6 +2,10 @@ import pkg from "@slack/bolt";
 const { App } = pkg;
 import { generateResponse, generateSummary } from "./openaiService.js";
 import { COMMANDS, RESPONSES } from "../constants/config.js";
+import {
+  storeQuestionAndResponse,
+  findSimilarQuestions,
+} from "./pineconeService.js";
 
 // Log environment variables (without the actual values)
 console.log("Environment variables loaded:", {
@@ -64,7 +68,7 @@ export async function setupSlackListeners() {
       if (text.includes(COMMANDS.SUMMARIZE)) {
         const messages = await getThreadMessages(
           message.channel,
-          message.thread_ts || message.ts,
+          message.thread_ts || message.ts
         );
 
         const summary = await generateSummary(messages);
@@ -88,14 +92,31 @@ export async function setupSlackListeners() {
       // Questions
       if (text.endsWith("?")) {
         try {
-          // You could integrate with OpenAI here for better responses
+          // First check for similar questions
+          const similarQuestions = await findSimilarQuestions(message.text);
+
+          // If we have a very similar question (high score), use the existing answer
+          const bestMatch = similarQuestions[0];
+          if (bestMatch && bestMatch.score > 0.95) {
+            await say({
+              text: `I found a similar question! Here's the answer:\n${bestMatch.response}`,
+              thread_ts: message.thread_ts || message.ts,
+            });
+            return;
+          }
+
+          // Generate new response if no good match found
           const response = await generateResponse(message.text);
+
+          // Store the new Q&A pair
+          await storeQuestionAndResponse(message.text, response);
+
           await say({
             text: response,
             thread_ts: message.thread_ts || message.ts,
           });
         } catch (error) {
-          console.error("Error generating response:", error);
+          console.error("Error handling question:", error);
           await say({
             text: RESPONSES.QUESTION_ERROR,
             thread_ts: message.thread_ts || message.ts,
@@ -129,7 +150,7 @@ export async function setupSlackListeners() {
       if (event.reaction === "summary") {
         const messages = await getThreadMessages(
           event.item.channel,
-          event.item.ts,
+          event.item.ts
         );
 
         const summary = await generateSummary(messages);
@@ -144,44 +165,6 @@ export async function setupSlackListeners() {
       console.error("Error handling reaction:", error);
     }
   });
-}
-
-// Helper function to join a channel
-export async function joinChannel(channelId) {
-  try {
-    console.log(`Attempting to join channel: ${channelId}`);
-
-    // First check if we can access the channel
-    try {
-      const channelInfo = await slackBot.client.conversations.info({
-        channel: channelId,
-      });
-      console.log("Channel info:", channelInfo);
-    } catch (infoError) {
-      console.error("Error getting channel info:", {
-        error: infoError,
-        scopes: infoError.data?.response_metadata?.scopes,
-        needed: infoError.data?.needed,
-        provided: infoError.data?.provided,
-      });
-    }
-
-    // Try to join the channel
-    const joinResult = await slackBot.client.conversations.join({
-      channel: channelId,
-    });
-    console.log("Join result:", joinResult);
-    console.log(`Bot joined channel ${channelId}`);
-  } catch (error) {
-    console.error("Error joining channel:", {
-      error: error.message,
-      code: error.code,
-      needed: error.data?.needed,
-      provided: error.data?.provided,
-      scopes: error.data?.response_metadata?.scopes,
-    });
-    throw error;
-  }
 }
 
 // Add this new function
