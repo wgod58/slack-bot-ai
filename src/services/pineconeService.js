@@ -1,7 +1,6 @@
 import { Pinecone } from '@pinecone-database/pinecone';
 
 import { PINECONE_CONFIG } from '../constants/config.js';
-import { createEmbedding } from './openaiService.js';
 
 const pinecone = new Pinecone({
   apiKey: PINECONE_CONFIG.API_KEY,
@@ -10,12 +9,9 @@ const pinecone = new Pinecone({
 // Initialize index
 const INDEX_NAME = 'slack-bot';
 
+// Initialize index
 async function initIndex() {
   try {
-    // List existing indexes
-    const indexes = await pinecone.listIndexes();
-    console.log('indexes', indexes);
-
     const index = pinecone.Index(INDEX_NAME);
     console.log('Pinecone index initialized:', INDEX_NAME);
     return index;
@@ -26,12 +22,9 @@ async function initIndex() {
 }
 
 // Store question and response in Pinecone
-async function storeQuestionAndResponse(question, response) {
+async function storeQuestionVectorInPinecone(question, response, questionEmbedding) {
   try {
     const index = pinecone.Index(INDEX_NAME);
-
-    // Create embedding for the question
-    const questionEmbedding = await createEmbedding(question);
 
     // Store in Pinecone
     await index.upsert([
@@ -55,10 +48,9 @@ async function storeQuestionAndResponse(question, response) {
 }
 
 // Find similar questions
-async function findSimilarQuestions(question, limit = 5) {
+async function findSimilarQuestionsInPinecone(questionEmbedding, limit = 5) {
   try {
     const index = pinecone.Index(INDEX_NAME);
-    const questionEmbedding = await createEmbedding(question);
 
     const queryResponse = await index.query({
       vector: questionEmbedding,
@@ -77,4 +69,4 @@ async function findSimilarQuestions(question, limit = 5) {
   }
 }
 
-export { findSimilarQuestions, initIndex, pinecone, storeQuestionAndResponse };
+export { findSimilarQuestionsInPinecone, initIndex, pinecone, storeQuestionVectorInPinecone };
