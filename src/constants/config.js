@@ -61,3 +61,10 @@ export const PINECONE_CONFIG = {
 export const SERVER_CONFIG = {
   PORT: process.env.PORT || 3000,
 };
+
+export const REDIS_CONFIG = {
+  URL: process.env.REDIS_URL || 'redis://localhost:6379',
+  USERNAME: process.env.REDIS_USERNAME,
+  PASSWORD: process.env.REDIS_PASSWORD,
+  POST: process.env.REDIS_POST,
+};
