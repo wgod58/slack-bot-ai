@@ -1,20 +1,17 @@
 import express from 'express';
 
-import { pinecone } from '../services/pineconeService.js';
 import { checkHealth as checkRedisHealth } from '../services/redisService.js';
 import { slackBot } from '../services/slackService.js';
+import { initIndex } from '../services/pineconeService.js';
 
 const router = express.Router();
 
-router.get('/health', async (req, res) => {
+router.get('/health', async (_, res) => {
   try {
     // Check Slack connection
     const slackStatus = await slackBot.client.auth.test().catch(() => null);
-
-    // Check Pinecone connection
-    const pineconeStatus = await pinecone.listIndexes().catch(() => null);
-
     // Check Redis connection
+    const pineconeStatus = await initIndex();
     const redisStatus = await checkRedisHealth();
 
     const health = {
@@ -23,8 +20,8 @@ router.get('/health', async (req, res) => {
       services: {
         server: 'up',
         slack: slackStatus ? 'connected' : 'disconnected',
-        pinecone: pineconeStatus ? 'connected' : 'disconnected',
         redis: redisStatus ? 'connected' : 'disconnected',
+        pinecone: pineconeStatus ? 'connected' : 'disconnected',
       },
       uptime: process.uptime(),
       memory: process.memoryUsage(),
