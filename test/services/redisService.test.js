@@ -9,35 +9,24 @@ import {
   storeQuestionVectorInRedis,
 } from '../../src/services/redisService.js';
 
-// Mock Redis
-jest.mock('ioredis', () => {
-  const mockRedis = {
-    ping: jest.fn(),
-    call: jest.fn(),
-    connect: jest.fn(),
-    disconnect: jest.fn(),
-    on: jest.fn(),
-    keys: jest.fn(),
-    get: jest.fn(),
-  };
-
-  return jest.fn().mockImplementation((...args) => {
-    console.log('args', args);
-    return mockRedis;
-  });
-});
+// Mock Redis with ioredis-mock
+// jest.setup.js or your test setup file
+jest.mock('ioredis', () => require('ioredis-mock'));
 
 describe('Redis Service', () => {
-  const mockRedis = redisClient;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    // mockRedis = new Redis();
+
+    // Clear Redis mock data
+    redisClient.call = jest.fn();
+    redisClient.ping = jest.fn();
+    redisClient.keys = jest.fn();
+    redisClient.get = jest.fn();
   });
 
   describe('configureRedis', () => {
     test('should configure Redis settings successfully', async () => {
-      mockRedis.call
+      redisClient.call
         .mockResolvedValueOnce('OK')
         .mockResolvedValueOnce('OK')
         .mockResolvedValueOnce('OK');
@@ -46,14 +35,14 @@ describe('Redis Service', () => {
 
       await configureRedis();
 
-      expect(mockRedis.call).toHaveBeenCalledWith('CONFIG', 'SET', 'maxmemory', '500mb');
-      expect(mockRedis.call).toHaveBeenCalledWith(
+      expect(redisClient.call).toHaveBeenCalledWith('CONFIG', 'SET', 'maxmemory', '500mb');
+      expect(redisClient.call).toHaveBeenCalledWith(
         'CONFIG',
         'SET',
         'maxmemory-policy',
         'allkeys-lfu',
       );
-      expect(mockRedis.call).toHaveBeenCalledWith('CONFIG', 'SET', 'maxmemory-samples', '10');
+      expect(redisClient.call).toHaveBeenCalledWith('CONFIG', 'SET', 'maxmemory-samples', '10');
       expect(consoleSpy).toHaveBeenCalledWith('Redis configured successfully.');
 
       consoleSpy.mockRestore();
@@ -61,9 +50,8 @@ describe('Redis Service', () => {
 
     test('should handle configuration errors', async () => {
       const mockError = new Error('Configuration failed');
-      console.log('mockRedis', mockRedis);
-      console.log('mockRedis.call', mockRedis.call);
-      mockRedis.call.mockRejectedValueOnce(mockError);
+
+      redisClient.call.mockRejectedValueOnce(mockError);
 
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -76,13 +64,13 @@ describe('Redis Service', () => {
 
   describe('createVectorIndex', () => {
     test('should create vector index successfully', async () => {
-      mockRedis.call.mockResolvedValueOnce('OK');
+      redisClient.call.mockResolvedValueOnce('OK');
 
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
       await createVectorIndex();
 
-      expect(mockRedis.call).toHaveBeenCalledWith(
+      expect(redisClient.call).toHaveBeenCalledWith(
         'FT.CREATE',
         'idx:questions',
         'ON',
@@ -118,7 +106,7 @@ describe('Redis Service', () => {
 
     test('should handle index creation errors', async () => {
       const mockError = new Error('Index creation failed');
-      mockRedis.call.mockRejectedValueOnce(mockError);
+      redisClient.call.mockRejectedValueOnce(mockError);
 
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -127,19 +115,38 @@ describe('Redis Service', () => {
 
       consoleSpy.mockRestore();
     });
+
+    test('should handle existing index gracefully', async () => {
+      const mockError = new Error('Index already exists');
+      redisClient.call.mockRejectedValueOnce(mockError);
+
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+      await createVectorIndex();
+
+      expect(consoleSpy).toHaveBeenCalledWith('Index already exists');
+      consoleSpy.mockRestore();
+    });
   });
 
   describe('checkHealth', () => {
     test('should return true when Redis is healthy', async () => {
-      mockRedis.ping.mockResolvedValueOnce('PONG');
+      redisClient.ping.mockResolvedValueOnce('PONG');
       const isHealthy = await checkHealth();
-      console.log('isHealthy', isHealthy);
       expect(isHealthy).toBe(true);
     });
 
     test('should return false when Redis is unhealthy', async () => {
       // Simulate Redis disconnection
-      await mockRedis.disconnect();
+      await redisClient.disconnect();
+      const isHealthy = await checkHealth();
+      expect(isHealthy).toBe(false);
+    });
+
+    test('should handle Redis connection errors', async () => {
+      const mockError = new Error('Redis connection failed');
+      redisClient.ping.mockRejectedValueOnce(mockError);
+
       const isHealthy = await checkHealth();
       expect(isHealthy).toBe(false);
     });
@@ -151,9 +158,9 @@ describe('Redis Service', () => {
       const response = 'Redis is an in-memory database';
       const vector = [0.1, 0.2, 0.3];
 
-      mockRedis.call.mockResolvedValueOnce('OK');
-      mockRedis.keys.mockResolvedValueOnce(['question:1234567890']);
-      mockRedis.get.mockResolvedValueOnce(
+      redisClient.call.mockResolvedValueOnce('OK');
+      redisClient.keys.mockResolvedValueOnce(['question:1234567890']);
+      redisClient.get.mockResolvedValueOnce(
         JSON.stringify({
           text: question,
           response,
@@ -163,7 +170,7 @@ describe('Redis Service', () => {
 
       await storeQuestionVectorInRedis(question, response, vector);
 
-      expect(mockRedis.call).toHaveBeenCalledWith(
+      expect(redisClient.call).toHaveBeenCalledWith(
         'JSON.SET',
         expect.stringContaining('question:'),
         '$',
@@ -173,7 +180,7 @@ describe('Redis Service', () => {
 
     test('should handle storage errors', async () => {
       const mockError = new Error('Storage failed');
-      mockRedis.call.mockRejectedValueOnce(mockError);
+      redisClient.call.mockRejectedValueOnce(mockError);
 
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -188,11 +195,22 @@ describe('Redis Service', () => {
       expect(consoleSpy).toHaveBeenCalledWith('Error storing question vector:', mockError);
       consoleSpy.mockRestore();
     });
+
+    test('should validate input parameters', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      await expect(storeQuestionVectorInRedis()).rejects.toThrow();
+      await expect(storeQuestionVectorInRedis('test')).rejects.toThrow();
+      await expect(storeQuestionVectorInRedis('test', 'response')).rejects.toThrow();
+
+      expect(consoleSpy).toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
   });
 
   describe('findSimilarQuestionsInRedis', () => {
     test('should find similar questions successfully', async () => {
-      mockRedis.call.mockResolvedValueOnce([
+      redisClient.call.mockResolvedValueOnce([
         1,
         'question:1',
         ['text', 'What is Redis?', 'response', 'Redis is a database', 'vector_score', '0.05'],
@@ -210,18 +228,100 @@ describe('Redis Service', () => {
     });
 
     test('should handle empty results', async () => {
-      mockRedis.call.mockResolvedValueOnce([0]);
+      redisClient.call.mockResolvedValueOnce([0]);
       const results = await findSimilarQuestionsInRedis([0.1, 0.2, 0.3]);
       expect(results).toEqual([]);
     });
 
     test('should handle search errors', async () => {
       const mockError = new Error('Search failed');
-      mockRedis.call.mockRejectedValueOnce(mockError);
+      redisClient.call.mockRejectedValueOnce(mockError);
 
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
       await expect(findSimilarQuestionsInRedis([0.1, 0.2, 0.3])).rejects.toThrow('Search failed');
+
+      expect(consoleSpy).toBeCalled();
+      consoleSpy.mockRestore();
+    });
+
+    test('should handle malformed search results', async () => {
+      // Mock malformed results
+      redisClient.call.mockResolvedValueOnce([
+        1,
+        'question:1',
+        null, // Invalid fields array
+      ]);
+
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const results = await findSimilarQuestionsInRedis([0.1, 0.2, 0.3]);
+
+      expect(results).toEqual([]);
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Unexpected field structure for document:',
+        'question:1',
+      );
+      consoleSpy.mockRestore();
+    });
+
+    // test('should handle parsing errors in search results', async () => {
+    //   redisClient.call.mockResolvedValueOnce([
+    //     1,
+    //     'question:1',
+    //     [
+    //       'text',
+    //       'What is Redis?',
+    //       'response',
+    //       'Redis is a database',
+    //       'vector_score',
+    //       'not-a-number',
+    //     ],
+    //   ]);
+
+    //   const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    //   const results = await findSimilarQuestionsInRedis([0.1, 0.2, 0.3]);
+
+    //   expect(results).toEqual([
+    //     {
+    //       id: 'question:1',
+    //       text: 'What is Redis?',
+    //       response: 'Redis is a database',
+    //       score: NaN,
+    //     },
+    //   ]);
+    //   expect(consoleSpy).toHaveBeenCalledWith('Error parsing result:', expect.any(Error));
+    //   consoleSpy.mockRestore();
+    // });
+  });
+
+  // Add Redis Client Events tests
+  describe('Redis Client Events', () => {
+    test('should handle reconnecting event', () => {
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+      // Trigger reconnecting event
+      redisClient.emit('reconnecting');
+
+      expect(consoleSpy).toHaveBeenCalledWith('Redis Client Reconnecting...');
+      consoleSpy.mockRestore();
+    });
+
+    test('should handle connect event', () => {
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+      // Trigger connect event
+      redisClient.emit('connect');
+
+      expect(consoleSpy).toHaveBeenCalledWith('Redis Client Connected');
+      consoleSpy.mockRestore();
+    });
+
+    test('should handle error event', () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      redisClient.emit('error');
 
       expect(consoleSpy).toBeCalled();
       consoleSpy.mockRestore();

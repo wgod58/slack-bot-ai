@@ -5,12 +5,9 @@ import { REDIS_CONFIG } from '../constants/config.js';
 const redisClient = new Redis({
   host: REDIS_CONFIG.HOST,
   port: REDIS_CONFIG.PORT || 6379,
-  username: REDIS_CONFIG.USERNAME || undefined,
+  username: REDIS_CONFIG.USERNAME,
   password: REDIS_CONFIG.PASSWORD,
   maxRetriesPerRequest: 3,
-  retryStrategy(times) {
-    return Math.min(times * 50, 2000);
-  },
   connectionName: 'slack-bot',
   enableOfflineQueue: true,
   connectTimeout: 10000,
@@ -151,32 +148,27 @@ function parseSearchResults(results) {
   const documents = [];
 
   for (let i = 1; i < results.length; i += 2) {
-    try {
-      const docId = results[i];
-      const fieldsArray = results[i + 1];
+    const docId = results[i];
+    const fieldsArray = results[i + 1];
 
-      if (!Array.isArray(fieldsArray)) {
-        console.warn('Unexpected field structure for document:', docId);
-        continue;
-      }
-
-      const fieldMap = Object.fromEntries(
-        fieldsArray.reduce((acc, val, index, arr) => {
-          if (index % 2 === 0) acc.push([val, arr[index + 1]]);
-          return acc;
-        }, []),
-      );
-
-      documents.push({
-        id: docId,
-        text: fieldMap.text || '',
-        response: fieldMap.response || '',
-        score: fieldMap.vector_score ? 1 - parseFloat(fieldMap.vector_score) : null,
-      });
-    } catch (error) {
-      console.error('Error parsing result:', error);
+    if (!Array.isArray(fieldsArray)) {
+      console.warn('Unexpected field structure for document:', docId);
       continue;
     }
+
+    const fieldMap = Object.fromEntries(
+      fieldsArray.reduce((acc, val, index, arr) => {
+        if (index % 2 === 0) acc.push([val, arr[index + 1]]);
+        return acc;
+      }, []),
+    );
+
+    documents.push({
+      id: docId,
+      text: fieldMap.text,
+      response: fieldMap.response,
+      score: 1 - parseFloat(fieldMap.vector_score),
+    });
   }
 
   return documents;
