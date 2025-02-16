@@ -1,4 +1,5 @@
 import { Pinecone } from '@pinecone-database/pinecone';
+
 import { PINECONE_CONFIG } from '../constants/config.js';
 
 // Lazy-load Pinecone (Only create when needed)
@@ -6,7 +7,7 @@ let pineconeInstance;
 
 function getPineconeInstance() {
   if (!pineconeInstance) {
-    pineconeInstance = new Pinecone({ apiKey: PINECONE_CONFIG.API_KEY || 'test-key' });
+    pineconeInstance = new Pinecone({ apiKey: PINECONE_CONFIG.API_KEY });
   }
   return pineconeInstance;
 }
@@ -64,11 +65,13 @@ async function findSimilarQuestionsInPinecone(questionEmbedding, limit = 5) {
       includeMetadata: true,
     });
 
-    return queryResponse.matches.map((match) => ({
-      question: match.metadata.question,
-      response: match.metadata.response,
-      score: match.score,
-    }));
+    return queryResponse.matches
+      .filter((match) => match.metadata?.question && match.metadata?.response)
+      .map((match) => ({
+        question: match.metadata.question,
+        response: match.metadata.response,
+        score: match.score,
+      }));
   } catch (error) {
     console.error('Error querying Pinecone:', error);
     throw error;
