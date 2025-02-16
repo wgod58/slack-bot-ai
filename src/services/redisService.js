@@ -2,12 +2,10 @@ import Redis from 'ioredis';
 
 import { REDIS_CONFIG } from '../constants/config.js';
 
-console.log('Connecting to Redis:', REDIS_CONFIG.URL);
-
 const redisClient = new Redis({
   host: REDIS_CONFIG.HOST,
   port: REDIS_CONFIG.PORT || 6379,
-  username: REDIS_CONFIG.USERNAME || undefined, // Only required for ACL-enabled Redis
+  username: REDIS_CONFIG.USERNAME || undefined,
   password: REDIS_CONFIG.PASSWORD,
   maxRetriesPerRequest: 3,
   retryStrategy(times) {
@@ -18,7 +16,6 @@ const redisClient = new Redis({
   connectTimeout: 10000,
 });
 
-// Log Redis Connection Events
 redisClient.on('connect', () => {
   console.log('Redis Client Connected');
   configureRedis();
@@ -32,25 +29,23 @@ redisClient.on('reconnecting', () => {
   console.log('Redis Client Reconnecting...');
 });
 
-// Function to Configure Redis (Instead of Lua Script)
 async function configureRedis() {
   try {
     console.log('Configuring Redis settings...');
-    await redisClient.config('SET', 'maxmemory', '500mb');
-    await redisClient.config('SET', 'maxmemory-policy', 'allkeys-lfu');
-    await redisClient.config('SET', 'maxmemory-samples', '10');
+    await redisClient.call('CONFIG', 'SET', 'maxmemory', '500mb');
+    await redisClient.call('CONFIG', 'SET', 'maxmemory-policy', 'allkeys-lfu');
+    await redisClient.call('CONFIG', 'SET', 'maxmemory-samples', '10');
     console.log('Redis configured successfully.');
   } catch (error) {
     console.error('Error configuring Redis:', error);
+    throw error;
   }
 }
 
-// Helper Function: Convert Float32Array to Buffer for Redis
 function float32ArrayToBuffer(array) {
   return Buffer.from(new Float32Array(array).buffer);
 }
 
-// Correct FT.CREATE Command
 async function createVectorIndex() {
   console.log('Creating vector index...');
   try {
@@ -91,13 +86,12 @@ async function createVectorIndex() {
     if (e.message.includes('Index already exists')) {
       console.log('Index already exists');
     } else {
-      console.error('Error creating index:', e);
+      console.error('Error creating vector index:', e);
       throw e;
     }
   }
 }
 
-// Store JSON-based vector data
 async function storeQuestionVectorInRedis(question, response, vector) {
   console.log('Storing question vector...');
   try {
@@ -107,7 +101,7 @@ async function storeQuestionVectorInRedis(question, response, vector) {
       id,
       '$',
       JSON.stringify({
-        vector: Array.from(vector), // Convert TypedArray to normal array for Redis JSON
+        vector: Array.from(vector),
         text: question,
         response,
         timestamp: new Date().toISOString(),
@@ -120,7 +114,6 @@ async function storeQuestionVectorInRedis(question, response, vector) {
   }
 }
 
-// Search function for similar vectors
 async function findSimilarQuestionsInRedis(vector, limit = 5) {
   console.log('Searching similar questions...');
   try {
@@ -131,7 +124,7 @@ async function findSimilarQuestionsInRedis(vector, limit = 5) {
       'PARAMS',
       '2',
       'BLOB',
-      float32ArrayToBuffer(Array.from(vector)), // Convert to Buffer
+      float32ArrayToBuffer(Array.from(vector)),
       'RETURN',
       '3',
       'text',
@@ -151,25 +144,22 @@ async function findSimilarQuestionsInRedis(vector, limit = 5) {
   }
 }
 
-// Helper Function: Parse Redis Search Results
 function parseSearchResults(results) {
   console.log('results', results);
   if (!results || results.length < 2) return [];
 
   const documents = [];
 
-  // Loop through search results (skip the first element, which is count)
   for (let i = 1; i < results.length; i += 2) {
     try {
-      const docId = results[i]; // The document ID (e.g., "question:1739638732615")
-      const fieldsArray = results[i + 1]; // The fields array
+      const docId = results[i];
+      const fieldsArray = results[i + 1];
 
       if (!Array.isArray(fieldsArray)) {
         console.warn('Unexpected field structure for document:', docId);
         continue;
       }
 
-      // Convert flat array into key-value pairs
       const fieldMap = Object.fromEntries(
         fieldsArray.reduce((acc, val, index, arr) => {
           if (index % 2 === 0) acc.push([val, arr[index + 1]]);
@@ -179,7 +169,7 @@ function parseSearchResults(results) {
 
       documents.push({
         id: docId,
-        text: fieldMap.text || '', // Default to empty string if missing
+        text: fieldMap.text || '',
         response: fieldMap.response || '',
         score: fieldMap.vector_score ? 1 - parseFloat(fieldMap.vector_score) : null,
       });
@@ -192,7 +182,6 @@ function parseSearchResults(results) {
   return documents;
 }
 
-// Health check function for Redis
 async function checkHealth() {
   try {
     const ping = await redisClient.ping();
@@ -203,4 +192,11 @@ async function checkHealth() {
   }
 }
 
-export { checkHealth, createVectorIndex, findSimilarQuestionsInRedis, storeQuestionVectorInRedis };
+export {
+  checkHealth,
+  configureRedis,
+  createVectorIndex,
+  findSimilarQuestionsInRedis,
+  redisClient,
+  storeQuestionVectorInRedis,
+};

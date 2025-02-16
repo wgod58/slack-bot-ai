@@ -143,7 +143,7 @@ async function handleQuestion(message, say) {
     // If not in Redis, check Pinecone
     const similarQuestions = await findSimilarQuestionsInPinecone(questionEmbedding);
     const bestMatch = similarQuestions[0];
-    console.log('bestMatch.score', bestMatch.score);
+
     if (bestMatch && bestMatch.score > 0.92) {
       await say({
         text: `I found a similar question! Here's the answer:\n${bestMatch.response}`,
