@@ -1,4 +1,10 @@
-import { jest, describe, test, expect, beforeEach } from '@jest/globals';
+import { beforeEach, describe, expect, jest, test } from '@jest/globals';
+
+import {
+  findSimilarQuestionsInPinecone,
+  initIndex,
+  storeQuestionVectorInPinecone,
+} from '../../src/services/pineconeService.js';
 
 // Mock Pinecone BEFORE Importing the Service
 const mockIndexInstance = {
@@ -16,13 +22,6 @@ jest.mock('@pinecone-database/pinecone', () => {
     Pinecone: jest.fn(() => mockPineconeInstance),
   };
 });
-
-import {
-  findSimilarQuestionsInPinecone,
-  initIndex,
-  storeQuestionVectorInPinecone,
-} from '../../src/services/pineconeService.js';
-import { Pinecone } from '@pinecone-database/pinecone';
 
 describe('sum module', () => {
   beforeEach(() => {
