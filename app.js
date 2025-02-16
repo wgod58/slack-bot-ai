@@ -29,7 +29,7 @@ async function startServer() {
 
     // Setup listeners
     console.log('Setting up Slack listeners...');
-    await setupSlackListeners();
+    await setupSlackListeners(slackBot);
 
     // Start Express server
     server.listen(SERVER_CONFIG.PORT, () => {

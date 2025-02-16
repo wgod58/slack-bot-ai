@@ -1,4 +1,4 @@
-import { App } from '@slack/bolt';
+import pkg from '@slack/bolt';
 
 import { COMMANDS, RESPONSES, SLACK_CONFIG } from '../constants/config.js';
 import { createEmbedding, generateResponse, generateSummary } from './openaiService.js';
@@ -7,6 +7,8 @@ import {
   storeQuestionVectorInPinecone,
 } from './pineconeService.js';
 import { findSimilarQuestionsInRedis, storeQuestionVectorInRedis } from './redisService.js';
+
+const { App } = pkg;
 
 console.log('***** App', App);
 
@@ -28,7 +30,7 @@ export async function getThreadMessages(channel, threadTs) {
 }
 
 // Setup Slack listeners
-export async function setupSlackListeners() {
+export async function setupSlackListeners(slackBot) {
   // Listen to direct mentions (@bot)
   slackBot.event('app_mention', handleAppMention);
 

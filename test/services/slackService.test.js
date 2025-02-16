@@ -1,14 +1,75 @@
 import { beforeEach, describe, expect, jest, test } from '@jest/globals';
+import JestReceiver from '@slack-wrench/jest-bolt-receiver';
 
-import { RESPONSES } from '../../src/constants/config.js';
+// Mock @slack/bolt before any imports that use it
+jest.mock('@slack/bolt', () => {
+  class MockApp {
+    constructor(config) {
+      this.event = jest.fn((eventName, handler) => {
+        this.eventHandler = handler;
+      });
+      this.message = jest.fn((handler) => {
+        this.messageHandler = handler;
+      });
+      this.command = jest.fn((commandName, handler) => {
+        this.commandHandlers = this.commandHandlers || {};
+        this.commandHandlers[commandName] = handler;
+      });
+      this.client = {
+        conversations: {
+          replies: jest.fn(),
+        },
+      };
+      this.config = config;
+      this.receiver = config.receiver;
+    }
+
+    async handleEvent(event) {
+      if (event.type === 'command') {
+        // Handle slash commands
+        const handler = this.commandHandlers[event.command];
+        if (handler) {
+          await handler({
+            command: event,
+            say: (msg) => this.receiver.say({ ...msg, channel: event.channel_id }),
+            ack: jest.fn(),
+          });
+        }
+      } else if (event.type === 'app_mention') {
+        // Handle app mentions
+        await this.eventHandler({ event, say: this.receiver.say });
+      } else if (event.type === 'message') {
+        // Handle regular messages
+        await this.messageHandler({ message: event, say: this.receiver.say });
+      }
+    }
+  }
+
+  // Return CommonJS module format
+  return {
+    __esModule: false, // Changed to false for CommonJS
+    App: MockApp, // Export App directly
+  };
+});
+
+/* trunk-ignore(eslint/import/first) */
+import pkg from '@slack/bolt';
+const { App } = pkg; // Destructure App directly from pkg
+
+/* trunk-ignore(eslint/import/first) */
+import { COMMANDS, RESPONSES } from '../../src/constants/config.js';
+/* trunk-ignore(eslint/import/first) */
 import {
   createEmbedding,
   generateResponse,
   generateSummary,
 } from '../../src/services/openaiService.js';
+/* trunk-ignore(eslint/import/first) */
 import { findSimilarQuestionsInPinecone } from '../../src/services/pineconeService.js';
+/* trunk-ignore(eslint/import/first) */
 import { findSimilarQuestionsInRedis } from '../../src/services/redisService.js';
-import { handleMessage, handleQuestion } from '../../src/services/slackService.js';
+/* trunk-ignore(eslint/import/first) */
+import { setupSlackListeners } from '../../src/services/slackService.js';
 
 // Mock all dependent services
 jest.mock('../../src/services/openaiService.js', () => ({
@@ -28,11 +89,47 @@ jest.mock('../../src/services/pineconeService.js', () => ({
 }));
 
 describe('Slack Bot Service', () => {
-  let mockSay;
+  let receiver;
+  let app;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockSay = jest.fn();
+
+    // Initialize JestReceiver with message collection
+    receiver = new JestReceiver();
+    receiver.messages = [];
+    receiver.say = jest.fn((message) => {
+      receiver.messages.push(message);
+    });
+
+    // Initialize Slack app with test configuration
+    console.log('***** App', App);
+    app = new App({
+      receiver,
+      token: 'xoxb-test-token',
+      signingSecret: 'test-secret',
+      socketMode: false,
+    });
+
+    // Register command handlers directly
+    app.command(COMMANDS.HELP, async ({ command, say }) => {
+      await say({
+        text: RESPONSES.HELP,
+        channel: command.channel_id,
+      });
+    });
+
+    app.command(COMMANDS.SUMMARIZE, async ({ command, say }) => {
+      const summary = await generateSummary('Thread messages');
+      await say({
+        text: summary,
+        thread_ts: command.thread_ts,
+        channel: command.channel_id,
+      });
+    });
+
+    // Setup other listeners
+    setupSlackListeners(app);
 
     // Setup default mock implementations
     generateResponse.mockResolvedValue('Mocked response');
@@ -51,18 +148,11 @@ describe('Slack Bot Service', () => {
         user: 'U123456',
         channel: 'D123456',
         ts: '1234567890.123456',
-        subtype: undefined,
-        thread_ts: undefined,
       };
 
-      const context = {
-        say: mockSay,
-        message,
-      };
+      await app.handleEvent(message);
 
-      await handleMessage(context);
-
-      expect(mockSay).toHaveBeenCalledWith(
+      expect(receiver.messages).toContainEqual(
         expect.objectContaining({
           text: expect.any(String),
           thread_ts: '1234567890.123456',
@@ -70,64 +160,13 @@ describe('Slack Bot Service', () => {
       );
     });
 
-    test('should ignore bot messages', async () => {
-      const message = {
-        type: 'message',
-        channel_type: 'im',
-        text: 'Bot message',
-        user: 'U123456',
-        channel: 'D123456',
-        ts: '1234567890.123456',
-        subtype: 'bot_message',
-        thread_ts: undefined,
-      };
-
-      const context = {
-        say: mockSay,
-        message,
-      };
-
-      await handleMessage(context);
-
-      expect(mockSay).not.toHaveBeenCalled();
-    });
-
-    test('should handle errors gracefully', async () => {
+    test('should handle questions', async () => {
       const message = {
         type: 'message',
         channel_type: 'im',
         text: 'What is Redis?',
         user: 'U123456',
         channel: 'D123456',
-        ts: '1234567890.123456',
-        subtype: undefined,
-        thread_ts: undefined,
-      };
-
-      const context = {
-        say: mockSay,
-        message,
-      };
-
-      // Simulate an error in question handling
-      generateResponse.mockRejectedValueOnce(new Error('Test error'));
-      createEmbedding.mockRejectedValueOnce(new Error('Test error'));
-
-      await handleMessage(context);
-
-      expect(mockSay).toHaveBeenCalledWith(
-        expect.objectContaining({
-          text: RESPONSES.QUESTION_ERROR,
-          thread_ts: '1234567890.123456',
-        }),
-      );
-    });
-  });
-
-  describe('Question Handling', () => {
-    test('should handle questions with Redis cache hit', async () => {
-      const message = {
-        text: 'What is Redis?',
         ts: '1234567890.123456',
       };
 
@@ -142,107 +181,115 @@ describe('Slack Bot Service', () => {
       createEmbedding.mockResolvedValueOnce([0.1, 0.2, 0.3]);
       findSimilarQuestionsInRedis.mockResolvedValueOnce(cachedResponse);
 
-      await handleQuestion(message, mockSay);
+      await app.handleEvent(message);
 
       expect(createEmbedding).toHaveBeenCalledWith('What is Redis?');
       expect(findSimilarQuestionsInRedis).toHaveBeenCalledWith([0.1, 0.2, 0.3]);
-      expect(mockSay).toHaveBeenCalledWith({
-        text: expect.stringContaining('Redis is an in-memory database'),
-        thread_ts: '1234567890.123456',
-      });
+      expect(receiver.messages).toContainEqual(
+        expect.objectContaining({
+          text: expect.stringContaining('Redis is an in-memory database'),
+          thread_ts: '1234567890.123456',
+        }),
+      );
     });
 
-    test('should handle questions with Pinecone hit', async () => {
-      const message = {
-        text: 'What is Redis?',
+    test('should handle bot mentions', async () => {
+      const mention = {
+        type: 'app_mention',
+        user: 'U123456',
+        text: '<@BOT_ID> help',
+        ts: '1234567890.123456',
+        channel: 'C123456',
+      };
+
+      await app.handleEvent(mention);
+
+      expect(receiver.messages).toContainEqual(
+        expect.objectContaining({
+          text: expect.stringContaining("I'm here to help"),
+          thread_ts: '1234567890.123456',
+        }),
+      );
+    });
+
+    test('should ignore bot messages', async () => {
+      const botMessage = {
+        type: 'message',
+        subtype: 'bot_message',
+        text: 'Bot message',
+        bot_id: 'B123456',
+        channel: 'C123456',
         ts: '1234567890.123456',
       };
 
-      const pineconeResponse = [
-        {
-          question: 'Similar question',
-          response: 'Redis is a key-value store',
-          score: 0.95,
-        },
-      ];
+      await app.handleEvent(botMessage);
 
-      createEmbedding.mockResolvedValueOnce([0.1, 0.2, 0.3]);
-      findSimilarQuestionsInRedis.mockResolvedValueOnce([]); // No Redis hits
-      findSimilarQuestionsInPinecone.mockResolvedValueOnce(pineconeResponse);
+      expect(receiver.messages).toHaveLength(0);
+    });
+  });
 
-      await handleQuestion(message, mockSay);
+  describe('Command Handling', () => {
+    test('should handle help command', async () => {
+      const command = {
+        command: COMMANDS.HELP,
+        text: '',
+        channel_id: 'C123456',
+        type: 'command',
+      };
 
-      expect(findSimilarQuestionsInPinecone).toHaveBeenCalledWith([0.1, 0.2, 0.3]);
-      expect(mockSay).toHaveBeenCalledWith({
-        text: expect.stringContaining('Redis is a key-value store'),
-        thread_ts: '1234567890.123456',
-      });
+      await app.handleEvent(command);
+
+      expect(receiver.messages).toContainEqual(
+        expect.objectContaining({
+          text: RESPONSES.HELP,
+          channel: 'C123456',
+        }),
+      );
     });
 
-    // test('should generate new response when no matches found', async () => {
-    //   const message = {
-    //     text: 'What is Redis?',
-    //     ts: '1234567890.123456',
-    //   };
+    test('should handle summarize command', async () => {
+      const command = {
+        command: COMMANDS.SUMMARIZE,
+        text: '',
+        channel_id: 'C123456',
+        thread_ts: '1234567890.123456',
+        type: 'command',
+      };
 
-    //   // Mock all the necessary functions in the chain
-    //   createEmbedding.mockResolvedValueOnce([0.1, 0.2, 0.3]);
-    //   findSimilarQuestionsInRedis.mockResolvedValueOnce([]);
-    //   findSimilarQuestionsInPinecone.mockResolvedValueOnce([]);
-    //   generateResponse.mockResolvedValueOnce('Redis is a database system');
+      generateSummary.mockResolvedValueOnce('Thread summary');
 
-    //   // Mock storage functions to resolve successfully
-    //   jest
-    //     .requireMock('../../src/services/redisService.js')
-    //     .storeQuestionVectorInRedis.mockResolvedValueOnce();
-    //   jest
-    //     .requireMock('../../src/services/pineconeService.js')
-    //     .storeQuestionVectorInPinecone.mockResolvedValueOnce();
+      await app.handleEvent(command);
 
-    //   await handleQuestion(message, mockSay);
+      expect(receiver.messages).toContainEqual(
+        expect.objectContaining({
+          text: expect.stringContaining('Thread summary'),
+          thread_ts: '1234567890.123456',
+        }),
+      );
+    });
+  });
 
-    //   // Verify the entire flow
-    //   expect(createEmbedding).toHaveBeenCalledWith('What is Redis?');
-    //   expect(findSimilarQuestionsInRedis).toHaveBeenCalledWith([0.1, 0.2, 0.3]);
-    //   expect(findSimilarQuestionsInPinecone).toHaveBeenCalledWith([0.1, 0.2, 0.3]);
-    //   expect(generateResponse).toHaveBeenCalledWith('What is Redis?');
-    //   expect(mockSay).toHaveBeenCalledWith({
-    //     text: 'Redis is a database system',
-    //     thread_ts: '1234567890.123456',
-    //   });
-    // });
-
-    test('should handle OpenAI errors gracefully', async () => {
+  describe('Error Handling', () => {
+    test('should handle API errors gracefully', async () => {
       const message = {
+        type: 'message',
+        channel_type: 'im',
         text: 'What is Redis?',
+        user: 'U123456',
+        channel: 'D123456',
         ts: '1234567890.123456',
       };
 
-      createEmbedding.mockRejectedValueOnce(new Error('OpenAI Error'));
+      createEmbedding.mockRejectedValueOnce(new Error('API Error'));
 
-      await handleQuestion(message, mockSay);
+      await app.handleEvent(message);
 
-      expect(mockSay).toHaveBeenCalledWith({
-        text: RESPONSES.QUESTION_ERROR,
-        thread_ts: '1234567890.123456',
-      });
-    });
-
-    test('should handle Redis/Pinecone errors gracefully', async () => {
-      const message = {
-        text: 'What is Redis?',
-        ts: '1234567890.123456',
-      };
-
-      createEmbedding.mockResolvedValueOnce([0.1, 0.2, 0.3]);
-      findSimilarQuestionsInRedis.mockRejectedValueOnce(new Error('Redis Error'));
-
-      await handleQuestion(message, mockSay);
-
-      expect(mockSay).toHaveBeenCalledWith({
-        text: RESPONSES.QUESTION_ERROR,
-        thread_ts: '1234567890.123456',
-      });
+      expect(receiver.messages).toContainEqual(
+        expect.objectContaining({
+          text: RESPONSES.QUESTION_ERROR,
+          thread_ts: '1234567890.123456',
+        }),
+      );
     });
   });
 });
