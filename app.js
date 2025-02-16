@@ -4,7 +4,6 @@ import express from 'express';
 
 import { SERVER_CONFIG } from './src/constants/config.js';
 import router from './src/routes/router.js';
-import { initIndex } from './src/services/pineconeService.js';
 import { createVectorIndex } from './src/services/redisService.js';
 import { setupSlackListeners, slackBot } from './src/services/slackService.js';
 
@@ -22,11 +21,6 @@ async function startServer() {
     // Initialize Redis vector index
     console.log('Initializing Redis vector index...');
     await createVectorIndex();
-
-    // Initialize Pinecone
-    console.log('Initializing Pinecone...');
-    const index = await initIndex();
-    global.pineconeIndex = index; // Store for global access if needed
 
     // Start Slack bot
     console.log('Starting Slack bot...');

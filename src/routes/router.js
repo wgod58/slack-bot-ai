@@ -2,7 +2,7 @@ import express from 'express';
 
 import { checkHealth as checkRedisHealth } from '../services/redisService.js';
 import { slackBot } from '../services/slackService.js';
-import { initIndex } from '../services/pineconeService.js';
+import { pinecone } from '../services/pineconeService.js';
 
 const router = express.Router();
 
@@ -11,7 +11,7 @@ router.get('/health', async (_, res) => {
     // Check Slack connection
     const slackStatus = await slackBot.client.auth.test().catch(() => null);
     // Check Redis connection
-    const pineconeStatus = await initIndex();
+    const pineconeStatus = pinecone ? true : false;
     const redisStatus = await checkRedisHealth();
 
     const health = {

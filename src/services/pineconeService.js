@@ -2,34 +2,12 @@ import { Pinecone } from '@pinecone-database/pinecone';
 
 import { PINECONE_CONFIG } from '../constants/config.js';
 
-// Lazy-load Pinecone (Only create when needed)
-let pineconeInstance;
-
-function getPineconeInstance() {
-  if (!pineconeInstance) {
-    pineconeInstance = new Pinecone({ apiKey: PINECONE_CONFIG.API_KEY });
-  }
-  return pineconeInstance;
-}
-
 const INDEX_NAME = 'slack-bot';
-
-// Initialize index
-function initIndex() {
-  try {
-    const pinecone = getPineconeInstance();
-    const index = pinecone.Index(INDEX_NAME);
-    return index;
-  } catch (error) {
-    console.error('Error initializing Pinecone index:', error);
-    throw error;
-  }
-}
+const pinecone = new Pinecone({ apiKey: PINECONE_CONFIG.API_KEY });
 
 // Store question and response in Pinecone
 async function storeQuestionVectorInPinecone(question, response, questionEmbedding) {
   try {
-    const pinecone = getPineconeInstance();
     const index = pinecone.Index(INDEX_NAME);
 
     // Store in Pinecone
@@ -56,7 +34,6 @@ async function storeQuestionVectorInPinecone(question, response, questionEmbeddi
 // Find similar questions
 async function findSimilarQuestionsInPinecone(questionEmbedding, limit = 5) {
   try {
-    const pinecone = getPineconeInstance();
     const index = pinecone.Index(INDEX_NAME);
 
     const queryResponse = await index.query({
@@ -78,4 +55,4 @@ async function findSimilarQuestionsInPinecone(questionEmbedding, limit = 5) {
   }
 }
 
-export { findSimilarQuestionsInPinecone, initIndex, storeQuestionVectorInPinecone };
+export { findSimilarQuestionsInPinecone, pinecone, storeQuestionVectorInPinecone };

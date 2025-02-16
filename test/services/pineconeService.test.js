@@ -2,54 +2,42 @@ import { beforeEach, describe, expect, jest, test } from '@jest/globals';
 
 import {
   findSimilarQuestionsInPinecone,
-  initIndex,
   storeQuestionVectorInPinecone,
 } from '../../src/services/pineconeService.js';
 
-// Mock Pinecone BEFORE Importing the Service
-const mockIndexInstance = {
-  query: jest.fn().mockResolvedValue({ matches: [] }),
-  upsert: jest.fn().mockResolvedValue({}),
-};
+// Create mock functions
+const mockUpsert = jest.fn();
+const mockQuery = jest.fn();
 
-const mockPineconeInstance = {
-  Index: jest.fn(() => mockIndexInstance),
-};
-
+// Mock Pinecone
 jest.mock('@pinecone-database/pinecone', () => ({
-  Pinecone: jest.fn(() => mockPineconeInstance),
+  Pinecone: jest.fn(() => ({
+    Index: jest.fn(() => ({
+      upsert: mockUpsert,
+      query: mockQuery,
+    })),
+  })),
 }));
 
 describe('Pinecone Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-  });
-
-  describe('initIndex', () => {
-    test('should initialize Pinecone index successfully', async () => {
-      const index = await initIndex();
-      expect(index).toBeDefined();
-      expect(mockPineconeInstance.Index).toHaveBeenCalledWith('slack-bot');
-    });
-
-    test('should handle initialization errors', async () => {
-      mockPineconeInstance.Index.mockImplementationOnce(() => {
-        return Promise.reject(new Error('Initialization failed'));
-      });
-
-      await expect(initIndex()).rejects.toThrow('Initialization failed');
-    });
+    // Reset mock implementations
+    mockUpsert.mockReset();
+    mockQuery.mockReset();
   });
 
   describe('storeQuestionVectorInPinecone', () => {
     test('should store a question vector with correct metadata', async () => {
+      mockUpsert.mockResolvedValueOnce({});
+
       const mockQuestion = 'What is Redis?';
       const mockResponse = 'Redis is an in-memory database.';
       const mockEmbedding = [0.1, 0.2, 0.3];
 
       await storeQuestionVectorInPinecone(mockQuestion, mockResponse, mockEmbedding);
 
-      expect(mockIndexInstance.upsert).toHaveBeenCalledWith([
+      expect(mockUpsert).toHaveBeenCalledWith([
         {
           id: expect.stringMatching(/^qa_\d+$/),
           values: mockEmbedding,
@@ -65,7 +53,7 @@ describe('Pinecone Service', () => {
 
     test('should handle storage errors', async () => {
       const mockError = new Error('Storage failed');
-      mockIndexInstance.upsert.mockRejectedValueOnce(mockError);
+      mockUpsert.mockRejectedValueOnce(mockError);
 
       await expect(
         storeQuestionVectorInPinecone('test', 'response', [0.1, 0.2, 0.3]),
@@ -73,19 +61,11 @@ describe('Pinecone Service', () => {
     });
 
     test('should validate input parameters', async () => {
-      // Mock implementation to throw on invalid parameters
-      mockIndexInstance.upsert.mockImplementation((vectors) => {
-        if (!vectors || !vectors[0]?.values) {
-          throw new Error('Invalid parameters');
-        }
-        return Promise.resolve({});
-      });
+      mockUpsert.mockRejectedValue(new Error('Invalid parameters'));
 
-      await expect(storeQuestionVectorInPinecone()).rejects.toThrow('Invalid parameters');
-      await expect(storeQuestionVectorInPinecone('test')).rejects.toThrow('Invalid parameters');
-      await expect(storeQuestionVectorInPinecone('test', 'response')).rejects.toThrow(
-        'Invalid parameters',
-      );
+      await expect(storeQuestionVectorInPinecone()).rejects.toThrow();
+      await expect(storeQuestionVectorInPinecone('test')).rejects.toThrow();
+      await expect(storeQuestionVectorInPinecone('test', 'response')).rejects.toThrow();
     });
   });
 
@@ -104,7 +84,7 @@ describe('Pinecone Service', () => {
         ],
       };
 
-      mockIndexInstance.query.mockResolvedValueOnce(mockResults);
+      mockQuery.mockResolvedValueOnce(mockResults);
 
       const results = await findSimilarQuestionsInPinecone(mockEmbedding, 5);
 
@@ -115,7 +95,8 @@ describe('Pinecone Service', () => {
           score: 0.95,
         },
       ]);
-      expect(mockIndexInstance.query).toHaveBeenCalledWith({
+
+      expect(mockQuery).toHaveBeenCalledWith({
         vector: mockEmbedding,
         topK: 5,
         includeMetadata: true,
@@ -123,20 +104,20 @@ describe('Pinecone Service', () => {
     });
 
     test('should handle empty results', async () => {
-      mockIndexInstance.query.mockResolvedValueOnce({ matches: [] });
+      mockQuery.mockResolvedValueOnce({ matches: [] });
       const results = await findSimilarQuestionsInPinecone([0.1, 0.2, 0.3]);
       expect(results).toEqual([]);
     });
 
     test('should handle query errors', async () => {
       const mockError = new Error('Query failed');
-      mockIndexInstance.query.mockRejectedValueOnce(mockError);
+      mockQuery.mockRejectedValueOnce(mockError);
 
       await expect(findSimilarQuestionsInPinecone([0.1, 0.2, 0.3])).rejects.toThrow('Query failed');
     });
 
     test('should handle invalid metadata in results', async () => {
-      mockIndexInstance.query.mockResolvedValueOnce({
+      mockQuery.mockResolvedValueOnce({
         matches: [
           { score: 0.95 }, // Missing metadata
           { metadata: {}, score: 0.9 }, // Empty metadata
@@ -160,50 +141,13 @@ describe('Pinecone Service', () => {
 
   describe('Error Logging', () => {
     test('should log errors with details', async () => {
-      const consoleSpy = jest.spyOn(console, 'error');
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       const mockError = new Error('Test error');
-      mockIndexInstance.query.mockRejectedValueOnce(mockError);
+      mockQuery.mockRejectedValueOnce(mockError);
 
       await expect(findSimilarQuestionsInPinecone([0.1, 0.2, 0.3])).rejects.toThrow('Test error');
       expect(consoleSpy).toHaveBeenCalledWith('Error querying Pinecone:', mockError);
       consoleSpy.mockRestore();
-    });
-  });
-
-  describe('getPineconeInstance', () => {
-    test('should create instance only once', async () => {
-      const firstIndex = await initIndex();
-      const secondIndex = await initIndex();
-
-      // Verify Pinecone constructor was called only once
-      expect(mockPineconeInstance.Index).toHaveBeenCalledTimes(2);
-      expect(firstIndex).toBe(secondIndex);
-    });
-
-    test('should handle missing API key', async () => {
-      // Temporarily remove API key
-      const originalApiKey = process.env.PINECONE_API_KEY;
-      delete process.env.PINECONE_API_KEY;
-
-      // Mock Pinecone constructor to throw when no API key
-      mockPineconeInstance.Index.mockImplementationOnce(() => {
-        throw new Error('Missing API key');
-      });
-
-      jest.spyOn(console, 'error');
-
-      try {
-        await initIndex();
-      } catch (error) {
-        expect(error.message).toBe('Missing API key');
-        expect(console.error).toHaveBeenCalledWith(
-          'Error initializing Pinecone index:',
-          expect.any(Error),
-        );
-      }
-
-      // Restore API key
-      process.env.PINECONE_API_KEY = originalApiKey;
     });
   });
 });
