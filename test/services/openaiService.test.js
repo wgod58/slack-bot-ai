@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, jest, test } from '@jest/globals';
-import { OpenAI } from 'openai';
 
 import { AI_CONFIG } from '../../src/constants/config.js';
 import {

@@ -264,36 +264,6 @@ describe('Redis Service', () => {
       );
       consoleSpy.mockRestore();
     });
-
-    // test('should handle parsing errors in search results', async () => {
-    //   redisClient.call.mockResolvedValueOnce([
-    //     1,
-    //     'question:1',
-    //     [
-    //       'text',
-    //       'What is Redis?',
-    //       'response',
-    //       'Redis is a database',
-    //       'vector_score',
-    //       'not-a-number',
-    //     ],
-    //   ]);
-
-    //   const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-
-    //   const results = await findSimilarQuestionsInRedis([0.1, 0.2, 0.3]);
-
-    //   expect(results).toEqual([
-    //     {
-    //       id: 'question:1',
-    //       text: 'What is Redis?',
-    //       response: 'Redis is a database',
-    //       score: NaN,
-    //     },
-    //   ]);
-    //   expect(consoleSpy).toHaveBeenCalledWith('Error parsing result:', expect.any(Error));
-    //   consoleSpy.mockRestore();
-    // });
   });
 
   // Add Redis Client Events tests
