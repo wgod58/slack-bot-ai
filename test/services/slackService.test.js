@@ -1,6 +1,4 @@
 import { beforeEach, describe, expect, jest, test } from '@jest/globals';
-import { App } from '@slack/bolt';
-import JestReceiver from '@slack-wrench/jest-bolt-receiver';
 
 import { RESPONSES } from '../../src/constants/config.js';
 import {
@@ -10,7 +8,7 @@ import {
 } from '../../src/services/openaiService.js';
 import { findSimilarQuestionsInPinecone } from '../../src/services/pineconeService.js';
 import { findSimilarQuestionsInRedis } from '../../src/services/redisService.js';
-import { handleMessage } from '../../src/services/slackService.js';
+import { handleMessage, handleQuestion } from '../../src/services/slackService.js';
 
 // Mock all dependent services
 jest.mock('../../src/services/openaiService.js', () => ({
@@ -30,13 +28,11 @@ jest.mock('../../src/services/pineconeService.js', () => ({
 }));
 
 describe('Slack Bot Service', () => {
-  let receiver;
   let mockSay;
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockSay = jest.fn();
-    receiver = new JestReceiver();
 
     // Setup default mock implementations
     generateResponse.mockResolvedValue('Mocked response');
@@ -128,110 +124,125 @@ describe('Slack Bot Service', () => {
     });
   });
 
-  // describe('Question Handling', () => {
-  //   test('should handle questions with Redis cache hit', async () => {
-  //     const cachedResponse = [{ text: 'Similar question', response: 'Cached answer', score: 0.95 }];
-  //     findSimilarQuestionsInRedis.mockResolvedValueOnce(cachedResponse);
+  describe('Question Handling', () => {
+    test('should handle questions with Redis cache hit', async () => {
+      const message = {
+        text: 'What is Redis?',
+        ts: '1234567890.123456',
+      };
 
-  //     const message = {
-  //       text: 'What is Redis?',
-  //       channel: 'C123456',
-  //       ts: '1234567890.123456',
-  //     };
+      const cachedResponse = [
+        {
+          text: 'Similar question',
+          response: 'Redis is an in-memory database',
+          score: 0.95,
+        },
+      ];
 
-  //     await handleQuestion(message, mockPostMessage);
+      createEmbedding.mockResolvedValueOnce([0.1, 0.2, 0.3]);
+      findSimilarQuestionsInRedis.mockResolvedValueOnce(cachedResponse);
 
-  //     expect(createEmbedding).toHaveBeenCalledWith('What is Redis?');
-  //     expect(findSimilarQuestionsInRedis).toHaveBeenCalled();
-  //     expect(mockPostMessage).toHaveBeenCalledWith(
-  //       expect.objectContaining({
-  //         text: expect.stringContaining('Cached answer'),
-  //       }),
-  //     );
-  //   });
+      await handleQuestion(message, mockSay);
 
-  //   test('should handle questions with Pinecone hit', async () => {
-  //     findSimilarQuestionsInRedis.mockResolvedValueOnce([]);
-  //     const pineconeResponse = [
-  //       { question: 'Similar question', response: 'Pinecone answer', score: 0.95 },
-  //     ];
-  //     findSimilarQuestionsInPinecone.mockResolvedValueOnce(pineconeResponse);
+      expect(createEmbedding).toHaveBeenCalledWith('What is Redis?');
+      expect(findSimilarQuestionsInRedis).toHaveBeenCalledWith([0.1, 0.2, 0.3]);
+      expect(mockSay).toHaveBeenCalledWith({
+        text: expect.stringContaining('Redis is an in-memory database'),
+        thread_ts: '1234567890.123456',
+      });
+    });
 
-  //     const message = {
-  //       text: 'What is Redis?',
-  //       channel: 'C123456',
-  //       ts: '1234567890.123456',
-  //     };
+    test('should handle questions with Pinecone hit', async () => {
+      const message = {
+        text: 'What is Redis?',
+        ts: '1234567890.123456',
+      };
 
-  //     await handleQuestion(message, mockPostMessage);
+      const pineconeResponse = [
+        {
+          question: 'Similar question',
+          response: 'Redis is a key-value store',
+          score: 0.95,
+        },
+      ];
 
-  //     expect(findSimilarQuestionsInPinecone).toHaveBeenCalled();
-  //     expect(mockPostMessage).toHaveBeenCalledWith(
-  //       expect.objectContaining({
-  //         text: expect.stringContaining('Pinecone answer'),
-  //       }),
-  //     );
-  //   });
+      createEmbedding.mockResolvedValueOnce([0.1, 0.2, 0.3]);
+      findSimilarQuestionsInRedis.mockResolvedValueOnce([]); // No Redis hits
+      findSimilarQuestionsInPinecone.mockResolvedValueOnce(pineconeResponse);
 
-  //   test('should generate new response when no matches found', async () => {
-  //     findSimilarQuestionsInRedis.mockResolvedValueOnce([]);
-  //     findSimilarQuestionsInPinecone.mockResolvedValueOnce([]);
-  //     generateResponse.mockResolvedValueOnce('New AI response');
+      await handleQuestion(message, mockSay);
 
-  //     const message = {
-  //       text: 'What is Redis?',
-  //       channel: 'C123456',
-  //       ts: '1234567890.123456',
-  //     };
+      expect(findSimilarQuestionsInPinecone).toHaveBeenCalledWith([0.1, 0.2, 0.3]);
+      expect(mockSay).toHaveBeenCalledWith({
+        text: expect.stringContaining('Redis is a key-value store'),
+        thread_ts: '1234567890.123456',
+      });
+    });
 
-  //     await handleQuestion(message, mockPostMessage);
+    // test('should generate new response when no matches found', async () => {
+    //   const message = {
+    //     text: 'What is Redis?',
+    //     ts: '1234567890.123456',
+    //   };
 
-  //     expect(generateResponse).toHaveBeenCalled();
-  //     expect(storeQuestionVectorInRedis).toHaveBeenCalled();
-  //     expect(storeQuestionVectorInPinecone).toHaveBeenCalled();
-  //     expect(mockPostMessage).toHaveBeenCalledWith(
-  //       expect.objectContaining({
-  //         text: 'New AI response',
-  //       }),
-  //     );
-  //   });
-  // });
+    //   // Mock all the necessary functions in the chain
+    //   createEmbedding.mockResolvedValueOnce([0.1, 0.2, 0.3]);
+    //   findSimilarQuestionsInRedis.mockResolvedValueOnce([]);
+    //   findSimilarQuestionsInPinecone.mockResolvedValueOnce([]);
+    //   generateResponse.mockResolvedValueOnce('Redis is a database system');
 
-  // describe('Error Handling', () => {
-  //   test('should handle OpenAI errors gracefully', async () => {
-  //     generateResponse.mockRejectedValueOnce(new Error('OpenAI Error'));
+    //   // Mock storage functions to resolve successfully
+    //   jest
+    //     .requireMock('../../src/services/redisService.js')
+    //     .storeQuestionVectorInRedis.mockResolvedValueOnce();
+    //   jest
+    //     .requireMock('../../src/services/pineconeService.js')
+    //     .storeQuestionVectorInPinecone.mockResolvedValueOnce();
 
-  //     const message = {
-  //       text: 'What is Redis?',
-  //       channel: 'C123456',
-  //       ts: '1234567890.123456',
-  //     };
+    //   await handleQuestion(message, mockSay);
 
-  //     await handleQuestion(message, mockPostMessage);
+    //   // Verify the entire flow
+    //   expect(createEmbedding).toHaveBeenCalledWith('What is Redis?');
+    //   expect(findSimilarQuestionsInRedis).toHaveBeenCalledWith([0.1, 0.2, 0.3]);
+    //   expect(findSimilarQuestionsInPinecone).toHaveBeenCalledWith([0.1, 0.2, 0.3]);
+    //   expect(generateResponse).toHaveBeenCalledWith('What is Redis?');
+    //   expect(mockSay).toHaveBeenCalledWith({
+    //     text: 'Redis is a database system',
+    //     thread_ts: '1234567890.123456',
+    //   });
+    // });
 
-  //     expect(mockPostMessage).toHaveBeenCalledWith(
-  //       expect.objectContaining({
-  //         text: RESPONSES.QUESTION_ERROR,
-  //       }),
-  //     );
-  //   });
+    test('should handle OpenAI errors gracefully', async () => {
+      const message = {
+        text: 'What is Redis?',
+        ts: '1234567890.123456',
+      };
 
-  //   test('should handle Redis errors gracefully', async () => {
-  //     findSimilarQuestionsInRedis.mockRejectedValueOnce(new Error('Redis Error'));
+      createEmbedding.mockRejectedValueOnce(new Error('OpenAI Error'));
 
-  //     const message = {
-  //       text: 'What is Redis?',
-  //       channel: 'C123456',
-  //       ts: '1234567890.123456',
-  //     };
+      await handleQuestion(message, mockSay);
 
-  //     await handleQuestion(message, mockPostMessage);
+      expect(mockSay).toHaveBeenCalledWith({
+        text: RESPONSES.QUESTION_ERROR,
+        thread_ts: '1234567890.123456',
+      });
+    });
 
-  //     expect(mockPostMessage).toHaveBeenCalledWith(
-  //       expect.objectContaining({
-  //         text: RESPONSES.QUESTION_ERROR,
-  //       }),
-  //     );
-  //   });
-  // });
+    test('should handle Redis/Pinecone errors gracefully', async () => {
+      const message = {
+        text: 'What is Redis?',
+        ts: '1234567890.123456',
+      };
+
+      createEmbedding.mockResolvedValueOnce([0.1, 0.2, 0.3]);
+      findSimilarQuestionsInRedis.mockRejectedValueOnce(new Error('Redis Error'));
+
+      await handleQuestion(message, mockSay);
+
+      expect(mockSay).toHaveBeenCalledWith({
+        text: RESPONSES.QUESTION_ERROR,
+        thread_ts: '1234567890.123456',
+      });
+    });
+  });
 });
