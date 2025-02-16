@@ -226,6 +226,74 @@ describe('Slack Bot Service', () => {
 
       expect(receiver.messages).toHaveLength(0);
     });
+
+    test('should handle hello messages', async () => {
+      const message = {
+        type: 'message',
+        channel_type: 'im',
+        text: 'hello bot',
+        user: 'U123456',
+        channel: 'D123456',
+        ts: '1234567890.123456',
+      };
+
+      await app.handleEvent(message);
+
+      expect(receiver.messages).toContainEqual(
+        expect.objectContaining({
+          text: RESPONSES.WELCOME,
+          thread_ts: '1234567890.123456',
+        }),
+      );
+    });
+
+    test('should handle default response for unknown messages', async () => {
+      const message = {
+        type: 'message',
+        channel_type: 'im',
+        text: 'random message',
+        user: 'U123456',
+        channel: 'D123456',
+        ts: '1234567890.123456',
+      };
+
+      await app.handleEvent(message);
+
+      expect(receiver.messages).toContainEqual(
+        expect.objectContaining({
+          text: RESPONSES.DEFAULT('random message'),
+          thread_ts: '1234567890.123456',
+        }),
+      );
+    });
+
+    test('should ignore messages without user', async () => {
+      const message = {
+        type: 'message',
+        channel_type: 'im',
+        text: 'test message',
+        channel: 'D123456',
+        ts: '1234567890.123456',
+      };
+
+      await app.handleEvent(message);
+
+      expect(receiver.messages).toHaveLength(0);
+    });
+
+    test('should ignore messages without text', async () => {
+      const message = {
+        type: 'message',
+        channel_type: 'im',
+        user: 'U123456',
+        channel: 'D123456',
+        ts: '1234567890.123456',
+      };
+
+      await app.handleEvent(message);
+
+      expect(receiver.messages).toHaveLength(0);
+    });
   });
 
   describe('Command Handling', () => {
@@ -269,6 +337,109 @@ describe('Slack Bot Service', () => {
     });
   });
 
+  describe('Question Handling', () => {
+    test('should handle questions with Pinecone fallback', async () => {
+      const message = {
+        type: 'message',
+        channel_type: 'im',
+        text: 'What is Redis?',
+        user: 'U123456',
+        channel: 'D123456',
+        ts: '1234567890.123456',
+      };
+
+      const pineconeResponse = [
+        {
+          question: 'Similar question',
+          response: 'Redis is a key-value store',
+          score: 0.95,
+        },
+      ];
+
+      createEmbedding.mockResolvedValueOnce([0.1, 0.2, 0.3]);
+      findSimilarQuestionsInRedis.mockResolvedValueOnce([]); // No Redis hits
+      findSimilarQuestionsInPinecone.mockResolvedValueOnce(pineconeResponse);
+
+      await app.handleEvent(message);
+
+      expect(findSimilarQuestionsInPinecone).toHaveBeenCalledWith([0.1, 0.2, 0.3]);
+      expect(receiver.messages).toContainEqual(
+        expect.objectContaining({
+          text: expect.stringContaining('Redis is a key-value store'),
+          thread_ts: '1234567890.123456',
+        }),
+      );
+    });
+
+    test('should generate new response when no matches found', async () => {
+      const message = {
+        type: 'message',
+        channel_type: 'im',
+        text: 'What is Redis?',
+        user: 'U123456',
+        channel: 'D123456',
+        ts: '1234567890.123456',
+      };
+
+      createEmbedding.mockResolvedValueOnce([0.1, 0.2, 0.3]);
+      findSimilarQuestionsInRedis.mockResolvedValueOnce([]);
+      findSimilarQuestionsInPinecone.mockResolvedValueOnce([]);
+      generateResponse.mockResolvedValueOnce('Redis is a database system');
+
+      await app.handleEvent(message);
+
+      expect(generateResponse).toHaveBeenCalledWith('What is Redis?');
+      expect(receiver.messages).toContainEqual(
+        expect.objectContaining({
+          text: 'Redis is a database system',
+          thread_ts: '1234567890.123456',
+        }),
+      );
+    });
+  });
+
+  describe('Thread Handling', () => {
+    test('should get thread messages', async () => {
+      const threadMessages = ['message 1', 'message 2'];
+      app.client.conversations.replies.mockResolvedValueOnce({
+        messages: threadMessages.map((text) => ({ text })),
+      });
+
+      const messages = await app.client.conversations.replies({
+        channel: 'C123456',
+        ts: '1234567890.123456',
+      });
+
+      expect(messages.messages).toEqual(threadMessages.map((text) => ({ text })));
+    });
+
+    test('should handle summarize command in thread', async () => {
+      const command = {
+        command: COMMANDS.SUMMARIZE,
+        text: '',
+        channel_id: 'C123456',
+        thread_ts: '1234567890.123456',
+        type: 'command',
+      };
+
+      const threadMessages = ['message 1', 'message 2'];
+      app.client.conversations.replies.mockResolvedValueOnce({
+        messages: threadMessages.map((text) => ({ text })),
+      });
+      generateSummary.mockResolvedValueOnce('Thread summary');
+
+      await app.handleEvent(command);
+
+      expect(generateSummary).toHaveBeenCalledWith(expect.any(String));
+      expect(receiver.messages).toContainEqual(
+        expect.objectContaining({
+          text: 'Thread summary',
+          thread_ts: '1234567890.123456',
+        }),
+      );
+    });
+  });
+
   describe('Error Handling', () => {
     test('should handle API errors gracefully', async () => {
       const message = {
@@ -281,6 +452,53 @@ describe('Slack Bot Service', () => {
       };
 
       createEmbedding.mockRejectedValueOnce(new Error('API Error'));
+
+      await app.handleEvent(message);
+
+      expect(receiver.messages).toContainEqual(
+        expect.objectContaining({
+          text: RESPONSES.QUESTION_ERROR,
+          thread_ts: '1234567890.123456',
+        }),
+      );
+    });
+
+    test('should handle Redis errors gracefully', async () => {
+      const message = {
+        type: 'message',
+        channel_type: 'im',
+        text: 'What is Redis?',
+        user: 'U123456',
+        channel: 'D123456',
+        ts: '1234567890.123456',
+      };
+
+      createEmbedding.mockResolvedValueOnce([0.1, 0.2, 0.3]);
+      findSimilarQuestionsInRedis.mockRejectedValueOnce(new Error('Redis Error'));
+
+      await app.handleEvent(message);
+
+      expect(receiver.messages).toContainEqual(
+        expect.objectContaining({
+          text: RESPONSES.QUESTION_ERROR,
+          thread_ts: '1234567890.123456',
+        }),
+      );
+    });
+
+    test('should handle Pinecone errors gracefully', async () => {
+      const message = {
+        type: 'message',
+        channel_type: 'im',
+        text: 'What is Redis?',
+        user: 'U123456',
+        channel: 'D123456',
+        ts: '1234567890.123456',
+      };
+
+      createEmbedding.mockResolvedValueOnce([0.1, 0.2, 0.3]);
+      findSimilarQuestionsInRedis.mockResolvedValueOnce([]);
+      findSimilarQuestionsInPinecone.mockRejectedValueOnce(new Error('Pinecone Error'));
 
       await app.handleEvent(message);
 
