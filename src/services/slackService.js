@@ -1,4 +1,4 @@
-import pkg from '@slack/bolt';
+import { App } from '@slack/bolt';
 
 import { COMMANDS, RESPONSES, SLACK_CONFIG } from '../constants/config.js';
 import { createEmbedding, generateResponse, generateSummary } from './openaiService.js';
@@ -7,7 +7,8 @@ import {
   storeQuestionVectorInPinecone,
 } from './pineconeService.js';
 import { findSimilarQuestionsInRedis, storeQuestionVectorInRedis } from './redisService.js';
-const { App } = pkg;
+
+console.log('***** App', App);
 
 const slackBot = new App({
   token: SLACK_CONFIG.BOT_TOKEN,
@@ -51,6 +52,8 @@ async function handleAppMention({ event, say }) {
 // Handle incoming messages
 async function handleMessage({ message, say }) {
   try {
+    console.log('Received message:', message);
+    // console.log('Received message:', message);
     // Ignore bot messages
     if (message.subtype && message.subtype === 'bot_message') {
       console.log('Bot message detected:', message);
@@ -172,4 +175,4 @@ async function handleQuestion(message, say) {
   }
 }
 
-export { slackBot };
+export { handleMessage, handleQuestion, handleSummarizeCommand, slackBot };
