@@ -6,6 +6,7 @@ import {
   createEmbedding,
   generateResponse,
   generateSummary,
+  openai,
 } from '../../src/services/openaiService.js';
 
 // Mock OpenAI class
@@ -28,11 +29,10 @@ jest.mock('openai', () => {
 });
 
 describe('OpenAI Service', () => {
-  let mockOpenAI;
+  const mockOpenAI = openai;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockOpenAI = new OpenAI();
   });
 
   describe('generateSummary', () => {

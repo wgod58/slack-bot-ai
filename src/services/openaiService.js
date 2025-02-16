@@ -6,7 +6,7 @@ const openai = new OpenAI({
   apiKey: AI_CONFIG.OPENAI_API_KEY,
 });
 
-export async function generateSummary(messages) {
+async function generateSummary(messages) {
   const prompt = `Please summarize this conversation:\n${messages.join('')}`;
 
   try {
@@ -26,7 +26,7 @@ export async function generateSummary(messages) {
   }
 }
 
-export async function generateResponse(question) {
+async function generateResponse(question) {
   try {
     const completion = await openai.chat.completions.create({
       model: AI_CONFIG.MODELS.CHAT,
@@ -53,7 +53,7 @@ export async function generateResponse(question) {
   }
 }
 
-export async function createEmbedding(text) {
+async function createEmbedding(text) {
   try {
     const response = await openai.embeddings.create({
       model: AI_CONFIG.MODELS.EMBEDDING,
@@ -70,3 +70,5 @@ export async function createEmbedding(text) {
     throw error;
   }
 }
+
+export { createEmbedding, generateResponse, generateSummary, openai };
