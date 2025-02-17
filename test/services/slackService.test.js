@@ -602,6 +602,109 @@ describe('Slack Bot Service', () => {
         }),
       );
     });
+
+    test('should handle general Slack errors with details', async () => {
+      const message = {
+        type: 'message',
+        channel_type: 'im',
+        text: 'hello bot',
+        user: 'U123456',
+        channel: 'D123456',
+        ts: '1234567890.123456',
+        thread_ts: '1234567890.123456',
+      };
+
+      // Create a detailed error object
+      const mockError = new Error('Slack API Error');
+      mockError.data = { error: 'invalid_auth' };
+      mockError.stack = 'Error stack trace';
+
+      // Mock console.error to prevent actual logging
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+      // Force an error by making the RESPONSES.WELCOME access throw
+      const originalWelcome = RESPONSES.WELCOME;
+      Object.defineProperty(RESPONSES, 'WELCOME', {
+        get: () => {
+          throw mockError;
+        },
+      });
+
+      await app.handleEvent(message);
+
+      // Verify error was logged with all details
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Slack Error:', {
+        error: mockError.message,
+        data: mockError.data,
+        stack: mockError.stack,
+      });
+
+      // Verify error response was sent in thread
+      expect(receiver.messages[0]).toEqual(
+        expect.objectContaining({
+          text: RESPONSES.ERROR,
+          thread_ts: '1234567890.123456',
+        }),
+      );
+
+      // Cleanup
+      Object.defineProperty(RESPONSES, 'WELCOME', {
+        value: originalWelcome,
+        writable: true,
+        configurable: true,
+      });
+      consoleErrorSpy.mockRestore();
+      consoleLogSpy.mockRestore();
+    });
+
+    test('should handle general Slack errors without thread_ts', async () => {
+      const message = {
+        type: 'message',
+        channel_type: 'im',
+        text: 'hello bot',
+        user: 'U123456',
+        channel: 'D123456',
+        ts: '1234567890.123456',
+        // No thread_ts
+      };
+
+      // Create a detailed error object
+      const mockError = new Error('Slack API Error');
+      mockError.data = { error: 'invalid_auth' };
+      mockError.stack = 'Error stack trace';
+
+      // Mock console.error to prevent actual logging
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+      // Force an error by making the RESPONSES.WELCOME access throw
+      const originalWelcome = RESPONSES.WELCOME;
+      Object.defineProperty(RESPONSES, 'WELCOME', {
+        get: () => {
+          throw mockError;
+        },
+      });
+
+      await app.handleEvent(message);
+
+      // Verify error response uses message ts as thread_ts
+      expect(receiver.messages[0]).toEqual(
+        expect.objectContaining({
+          text: RESPONSES.ERROR,
+          thread_ts: '1234567890.123456', // Should use message.ts
+        }),
+      );
+
+      // Cleanup
+      Object.defineProperty(RESPONSES, 'WELCOME', {
+        value: originalWelcome,
+        writable: true,
+        configurable: true,
+      });
+      consoleErrorSpy.mockRestore();
+      consoleLogSpy.mockRestore();
+    });
   });
 
   describe('Command Message Handling', () => {

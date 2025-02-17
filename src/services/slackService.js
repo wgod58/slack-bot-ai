@@ -81,18 +81,18 @@ async function handleMessage({ message, say }) {
       return;
     }
 
-    console.log('text', text);
-    console.log('COMMANDS.SUMMARIZE', COMMANDS.SUMMARIZE);
     if (text.includes(COMMANDS.SUMMARIZE)) {
       await handleSummarizeCommand(message, say);
       return;
     }
 
     if (text.includes('hello') || text.includes('hi')) {
+      console.log('hello or hi');
       await say({
         text: RESPONSES.WELCOME,
         thread_ts: message.thread_ts || message.ts,
       });
+      console.log('hello or hi success');
       return;
     }
 
@@ -107,6 +107,7 @@ async function handleMessage({ message, say }) {
       thread_ts: message.thread_ts || message.ts,
     });
   } catch (error) {
+    console.log('**************** error');
     console.error('Slack Error:', {
       error: error.message,
       data: error.data,
@@ -130,14 +131,9 @@ async function handleSummarizeCommand(message, say) {
       });
       return;
     }
-    console.log('*****************');
-    console.log('message.thread_ts', message.thread_ts);
 
     const threadMessages = await getThreadMessages(message.channel, message.thread_ts);
-    console.log('111111111');
-    console.log('generateSummary', generateSummary);
     const summary = await generateSummary(threadMessages.join('\n'));
-    console.log('222222222');
     await say({
       text: summary,
       thread_ts: message.thread_ts,
