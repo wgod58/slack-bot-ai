@@ -1,14 +1,12 @@
 import { App } from '@slack/bolt';
 
-import { COMMANDS, RESPONSES, SLACK_CONFIG } from '../constants/config.js';
+import { AI_CONFIG, COMMANDS, RESPONSES, SLACK_CONFIG } from '../constants/config.js';
 import { createEmbedding, generateResponse, generateSummary } from './openaiService.js';
 import {
   findSimilarQuestionsInPinecone,
   storeQuestionVectorInPinecone,
 } from './pineconeService.js';
 import { findSimilarQuestionsInRedis, storeQuestionVectorInRedis } from './redisService.js';
-
-// const { App } = pkg;
 
 let slackBot;
 
@@ -148,15 +146,14 @@ async function handleSummarizeCommand(message, say) {
 
 // Handle questions
 async function handleQuestion(message, say) {
+  const questionEmbedding = await createEmbedding(message.text);
   try {
-    // Create embedding for the question
-    const questionEmbedding = await createEmbedding(message.text);
-
     // First check Redis for similar questions
     const redisSimilar = await findSimilarQuestionsInRedis(questionEmbedding);
     const bestRedisMatch = redisSimilar[0];
 
-    if (bestRedisMatch && bestRedisMatch.score > 0.92) {
+    if (bestRedisMatch && bestRedisMatch.score > AI_CONFIG.MATCH_SCORE) {
+      console.log('bestRedisMatch.score', bestRedisMatch.score);
       await say({
         text: `I found a similar question in cache! Here's the answer:\n${bestRedisMatch.response}`,
         thread_ts: message.thread_ts || message.ts,
@@ -168,18 +165,18 @@ async function handleQuestion(message, say) {
     const similarQuestions = await findSimilarQuestionsInPinecone(questionEmbedding);
     const bestMatch = similarQuestions[0];
 
-    if (bestMatch && bestMatch.score > 0.92) {
+    if (bestMatch && bestMatch.score > AI_CONFIG.MATCH_SCORE) {
+      console.log('bestMatch.score', bestMatch.score);
       await say({
         text: `I found a similar question! Here's the answer:\n${bestMatch.response}`,
         thread_ts: message.thread_ts || message.ts,
       });
+      await storeQuestionVectorInRedis(message.text, bestMatch.response, questionEmbedding);
       return;
     }
 
     // Generate new response if no good match found
-    const response = await generateResponse(message.text);
-
-    // Store in both Redis and Pinecone
+    response = await generateResponse(message.text);
     await storeQuestionVectorInRedis(message.text, response, questionEmbedding);
     await storeQuestionVectorInPinecone(message.text, response, questionEmbedding);
 

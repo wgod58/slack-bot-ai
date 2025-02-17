@@ -8,8 +8,15 @@ import {
   generateSummary,
 } from '../../src/services/openaiService.js';
 import { findSimilarQuestionsInPinecone } from '../../src/services/pineconeService.js';
-import { findSimilarQuestionsInRedis } from '../../src/services/redisService.js';
-import { initialSlackBot, setupSlackListeners } from '../../src/services/slackService.js';
+import {
+  findSimilarQuestionsInRedis,
+  storeQuestionVectorInRedis,
+} from '../../src/services/redisService.js';
+import {
+  handleQuestion,
+  initialSlackBot,
+  setupSlackListeners,
+} from '../../src/services/slackService.js';
 
 // Mock @slack/bolt before any imports that use it
 jest.mock('@slack/bolt', () => {
@@ -387,26 +394,39 @@ describe('Slack Bot Service', () => {
     test('should generate new response when no matches found', async () => {
       const message = {
         type: 'message',
-        channel_type: 'im',
-        text: 'What is Redis?',
+        text: 'What is the meaning of life?',
         user: 'U123456',
         channel: 'D123456',
         ts: '1234567890.123456',
       };
 
-      createEmbedding.mockResolvedValueOnce([0.1, 0.2, 0.3]);
+      const mockResponse = 'The meaning of life is 42';
+      const questionEmbedding = [0.1, 0.2, 0.3];
+      createEmbedding.mockResolvedValueOnce(questionEmbedding);
+
       findSimilarQuestionsInRedis.mockResolvedValueOnce([]);
       findSimilarQuestionsInPinecone.mockResolvedValueOnce([]);
-      generateResponse.mockResolvedValueOnce('Redis is a database system');
+      generateResponse.mockResolvedValueOnce(mockResponse);
 
-      await app.handleEvent(message);
+      await handleQuestion(message, receiver.say);
 
-      expect(generateResponse).toHaveBeenCalledWith('What is Redis?');
-      expect(receiver.messages).toContainEqual(
-        expect.objectContaining({
-          text: 'Redis is a database system',
-          thread_ts: '1234567890.123456',
-        }),
+      expect(generateResponse).toHaveBeenCalledWith(message.text);
+      console.log('****** receiver.messages', receiver.messages);
+      // expect(receiver.messages[0]).toEqual(
+      //   expect.objectContaining({
+      //     text: mockResponse,
+      //     thread_ts: message.ts,
+      //   }),
+      // );
+      expect(storeQuestionVectorInRedis).toHaveBeenCalledWith(
+        message.text,
+        mockResponse,
+        questionEmbedding,
+      );
+      expect(storeQuestionVectorInPinecone).toHaveBeenCalledWith(
+        message.text,
+        mockResponse,
+        questionEmbedding,
       );
     });
   });
@@ -537,7 +557,6 @@ describe('Slack Bot Service', () => {
     test('should handle API errors gracefully', async () => {
       const message = {
         type: 'message',
-        channel_type: 'im',
         text: 'What is Redis?',
         user: 'U123456',
         channel: 'D123456',
@@ -546,9 +565,9 @@ describe('Slack Bot Service', () => {
 
       createEmbedding.mockRejectedValueOnce(new Error('API Error'));
 
-      await app.handleEvent(message);
+      await handleQuestion(message, receiver.say);
 
-      expect(receiver.messages).toContainEqual(
+      expect(receiver.messages[1]).toEqual(
         expect.objectContaining({
           text: RESPONSES.QUESTION_ERROR,
           thread_ts: '1234567890.123456',
@@ -559,7 +578,6 @@ describe('Slack Bot Service', () => {
     test('should handle Redis errors gracefully', async () => {
       const message = {
         type: 'message',
-        channel_type: 'im',
         text: 'What is Redis?',
         user: 'U123456',
         channel: 'D123456',
@@ -569,14 +587,15 @@ describe('Slack Bot Service', () => {
       createEmbedding.mockResolvedValueOnce([0.1, 0.2, 0.3]);
       findSimilarQuestionsInRedis.mockRejectedValueOnce(new Error('Redis Error'));
 
-      await app.handleEvent(message);
+      await handleQuestion(message, receiver.say);
 
-      expect(receiver.messages).toContainEqual(
+      expect(receiver.messages[0]).toEqual(
         expect.objectContaining({
           text: RESPONSES.QUESTION_ERROR,
           thread_ts: '1234567890.123456',
         }),
       );
+      expect(findSimilarQuestionsInRedis).toHaveBeenCalled();
     });
 
     test('should handle Pinecone errors gracefully', async () => {

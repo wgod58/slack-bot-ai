@@ -87,9 +87,9 @@ async function storeQuestionVectorInRedis(question, response, vector) {
         timestamp: new Date().toISOString(),
       }),
     );
-    console.log('Stored question vector:', id);
+    console.log('Stored redis question vector:', id);
   } catch (error) {
-    console.error('Error storing question vector:', error);
+    console.error('Error storing redis question vector:', error);
     throw error;
   }
 }

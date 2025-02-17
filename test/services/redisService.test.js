@@ -153,7 +153,7 @@ describe('Redis Service', () => {
         'Storage failed',
       );
 
-      expect(consoleSpy).toHaveBeenCalledWith('Error storing question vector:', mockError);
+      expect(consoleSpy).toHaveBeenCalledWith('Error storing redis question vector:', mockError);
       consoleSpy.mockRestore();
     });
 

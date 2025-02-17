@@ -96,7 +96,7 @@ describe('Config Constants', () => {
   describe('REDIS_CONFIG', () => {
     test('should have correct Redis configuration', () => {
       expect(REDIS_CONFIG).toEqual({
-        URL: process.env.REDIS_URL || 'redis://localhost:6379',
+        HOST: process.env.REDIS_HOST || 'localhost',
         USERNAME: process.env.REDIS_USERNAME,
         PASSWORD: process.env.REDIS_PASSWORD,
         PORT: process.env.REDIS_PORT,
@@ -104,8 +104,8 @@ describe('Config Constants', () => {
     });
 
     test('should handle missing environment variables', () => {
-      expect(REDIS_CONFIG.URL).toBeDefined();
-      expect(typeof REDIS_CONFIG.URL).toBe('string');
+      expect(REDIS_CONFIG.HOST).toBeDefined();
+      expect(typeof REDIS_CONFIG.HOST).toBe('string');
     });
   });
 
@@ -119,13 +119,13 @@ describe('Config Constants', () => {
 
     test('should handle missing environment variables', () => {
       delete process.env.PORT;
-      delete process.env.REDIS_URL;
+      delete process.env.REDIS_HOST;
 
       // Re-import to test defaults
       const { SERVER_CONFIG, REDIS_CONFIG } = require('../../src/constants/config.js');
 
       expect(SERVER_CONFIG.PORT).toBe(3000);
-      expect(REDIS_CONFIG.URL).toBe('redis://localhost:6379');
+      expect(REDIS_CONFIG.HOST).toBe('localhost');
     });
 
     afterAll(() => {
