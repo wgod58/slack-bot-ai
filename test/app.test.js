@@ -53,7 +53,7 @@ describe('App', () => {
 
       expect(express.json).toHaveBeenCalled();
       expect(app.server.use).toHaveBeenCalledWith(express.json());
-      expect(app.server.use).toHaveBeenCalledWith('mockRouter');
+      expect(app.server.use).toHaveBeenCalledWith('/api', 'mockRouter');
     });
 
     test('should create vector index', async () => {

@@ -16,7 +16,7 @@ class App {
     try {
       // Setup middleware
       this.server.use(express.json());
-      this.server.use(router);
+      this.server.use('/api', router);
 
       // Initialize Redis vector index
       await createRedisVectorIndex();
