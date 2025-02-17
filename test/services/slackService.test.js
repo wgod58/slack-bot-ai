@@ -1,6 +1,16 @@
 import { beforeEach, describe, expect, jest, test } from '@jest/globals';
 import JestReceiver from '@slack-wrench/jest-bolt-receiver';
 
+import { COMMANDS, RESPONSES } from '../../src/constants/config.js';
+import {
+  createEmbedding,
+  generateResponse,
+  generateSummary,
+} from '../../src/services/openaiService.js';
+import { findSimilarQuestionsInPinecone } from '../../src/services/pineconeService.js';
+import { findSimilarQuestionsInRedis } from '../../src/services/redisService.js';
+import { initialSlackBot, setupSlackListeners } from '../../src/services/slackService.js';
+
 // Mock @slack/bolt before any imports that use it
 jest.mock('@slack/bolt', () => {
   class MockApp {
@@ -59,25 +69,6 @@ jest.mock('@slack/bolt', () => {
     App: MockApp, // Export App directly
   };
 });
-
-/* trunk-ignore(eslint/import/first) */
-// import pkg from '@slack/bolt';
-// const { App } = pkg; // Destructure App directly from pkg
-
-/* trunk-ignore(eslint/import/first) */
-import { COMMANDS, RESPONSES } from '../../src/constants/config.js';
-/* trunk-ignore(eslint/import/first) */
-import {
-  createEmbedding,
-  generateResponse,
-  generateSummary,
-} from '../../src/services/openaiService.js';
-/* trunk-ignore(eslint/import/first) */
-import { findSimilarQuestionsInPinecone } from '../../src/services/pineconeService.js';
-/* trunk-ignore(eslint/import/first) */
-import { findSimilarQuestionsInRedis } from '../../src/services/redisService.js';
-/* trunk-ignore(eslint/import/first) */
-import { initialSlackBot, setupSlackListeners } from '../../src/services/slackService.js';
 
 // Mock all dependent services
 jest.mock('../../src/services/openaiService.js', () => ({
@@ -613,48 +604,48 @@ describe('Slack Bot Service', () => {
     });
   });
 
-  // describe('Command Message Handling', () => {
-  //   test('should handle help command via message', async () => {
-  //     const message = {
-  //       type: 'message',
-  //       channel_type: 'im',
-  //       text: '!help',
-  //       user: 'U123456',
-  //       channel: 'D123456',
-  //       ts: '1234567890.123456',
-  //     };
+  describe('Command Message Handling', () => {
+    test('should handle help command via message', async () => {
+      const message = {
+        type: 'message',
+        channel_type: 'im',
+        text: '!help',
+        user: 'U123456',
+        channel: 'D123456',
+        ts: '1234567890.123456',
+      };
 
-  //     await app.handleEvent(message);
+      await app.handleEvent(message);
 
-  //     expect(receiver.messages).toContainEqual(
-  //       expect.objectContaining({
-  //         text: RESPONSES.HELP,
-  //         thread_ts: '1234567890.123456',
-  //       }),
-  //     );
-  //   });
+      expect(receiver.messages).toContainEqual(
+        expect.objectContaining({
+          text: RESPONSES.HELP,
+          thread_ts: '1234567890.123456',
+        }),
+      );
+    });
 
-  //   test('should handle summarize command errors', async () => {
-  //     const message = {
-  //       type: 'message',
-  //       channel_type: 'im',
-  //       text: '!summarize',
-  //       user: 'U123456',
-  //       channel: 'D123456',
-  //       ts: '1234567890.123456',
-  //       thread_ts: '1234567890.123456',
-  //     };
+    test('should handle summarize command errors', async () => {
+      const message = {
+        type: 'message',
+        channel_type: 'im',
+        text: '!summarize',
+        user: 'U123456',
+        channel: 'D123456',
+        ts: '1234567890.123456',
+        thread_ts: '1234567890.123456',
+      };
 
-  //     app.client.conversations.replies = jest.fn().mockRejectedValue(new Error('Thread Error'));
+      app.client.conversations.replies = jest.fn().mockRejectedValue(new Error('Thread Error'));
 
-  //     await app.handleEvent(message);
+      await app.handleEvent(message);
 
-  //     expect(receiver.messages).toContainEqual(
-  //       expect.objectContaining({
-  //         text: RESPONSES.SUMMARIZE_ERROR,
-  //         thread_ts: '1234567890.123456',
-  //       }),
-  //     );
-  //   });
-  // });
+      expect(receiver.messages).toContainEqual(
+        expect.objectContaining({
+          text: RESPONSES.SUMMARIZE_ERROR,
+          thread_ts: '1234567890.123456',
+        }),
+      );
+    });
+  });
 });
