@@ -10,14 +10,20 @@ import { findSimilarQuestionsInRedis, storeQuestionVectorInRedis } from './redis
 
 const { App } = pkg;
 
-console.log('***** App', App);
+let slackBot;
 
-const slackBot = new App({
-  token: SLACK_CONFIG.BOT_TOKEN,
-  signingSecret: SLACK_CONFIG.SIGNING_SECRET,
-  socketMode: true,
-  appToken: SLACK_CONFIG.APP_TOKEN,
-});
+export function initialSlackBot(socketMode = true, receiver) {
+  if (!slackBot) {
+    slackBot = new App({
+      token: SLACK_CONFIG.BOT_TOKEN,
+      signingSecret: SLACK_CONFIG.SIGNING_SECRET,
+      socketMode,
+      appToken: SLACK_CONFIG.APP_TOKEN,
+      receiver,
+    });
+  }
+  return slackBot;
+}
 
 // Get thread messages
 export async function getThreadMessages(channel, threadTs) {
@@ -25,7 +31,7 @@ export async function getThreadMessages(channel, threadTs) {
     channel,
     ts: threadTs,
   });
-
+  console.log('threadMessages', threadMessages);
   return threadMessages.messages.map((m) => m.text);
 }
 
@@ -40,22 +46,17 @@ export async function setupSlackListeners(slackBot) {
 
 // Handle app mentions
 async function handleAppMention({ event, say }) {
-  try {
-    console.log('Bot mentioned:', event);
-    await say({
-      text: "Hello! I'm here to help. Use `!summarize` in a thread to get a summary.",
-      thread_ts: event.thread_ts || event.ts,
-    });
-  } catch (error) {
-    console.error('Error handling mention:', error);
-  }
+  console.log('handleAppMention Bot mentioned:', event);
+  await say({
+    text: "Hello! I'm here to help. Use `!summarize` in a thread to get a summary.",
+    thread_ts: event.thread_ts || event.ts,
+  });
+  console.log('handleAppMention Bot mentioned: success');
 }
 
 // Handle incoming messages
 async function handleMessage({ message, say }) {
   try {
-    console.log('Received message:', message);
-    // console.log('Received message:', message);
     // Ignore bot messages
     if (message.subtype && message.subtype === 'bot_message') {
       console.log('Bot message detected:', message);
@@ -80,6 +81,8 @@ async function handleMessage({ message, say }) {
       return;
     }
 
+    console.log('text', text);
+    console.log('COMMANDS.SUMMARIZE', COMMANDS.SUMMARIZE);
     if (text.includes(COMMANDS.SUMMARIZE)) {
       await handleSummarizeCommand(message, say);
       return;
@@ -118,13 +121,34 @@ async function handleMessage({ message, say }) {
 
 // Handle summarize command
 async function handleSummarizeCommand(message, say) {
-  const messages = await getThreadMessages(message.channel, message.thread_ts || message.ts);
-  const summary = await generateSummary(messages);
+  console.log('handleSummarizeCommand', message);
+  try {
+    if (!message.thread_ts) {
+      await say({
+        text: RESPONSES.SUMMARIZE_NO_THREAD,
+        thread_ts: message.ts,
+      });
+      return;
+    }
+    console.log('*****************');
+    console.log('message.thread_ts', message.thread_ts);
 
-  await say({
-    text: `Thread Summary:\n${summary}`,
-    thread_ts: message.thread_ts || message.ts,
-  });
+    const threadMessages = await getThreadMessages(message.channel, message.thread_ts);
+    console.log('111111111');
+    console.log('generateSummary', generateSummary);
+    const summary = await generateSummary(threadMessages.join('\n'));
+    console.log('222222222');
+    await say({
+      text: summary,
+      thread_ts: message.thread_ts,
+    });
+  } catch (error) {
+    console.error('Error generating summary:', error);
+    await say({
+      text: RESPONSES.SUMMARIZE_ERROR,
+      thread_ts: message.thread_ts || message.ts,
+    });
+  }
 }
 
 // Handle questions
@@ -177,4 +201,4 @@ async function handleQuestion(message, say) {
   }
 }
 
-export { handleMessage, handleQuestion, handleSummarizeCommand, slackBot };
+export { handleMessage, handleQuestion, handleSummarizeCommand };

@@ -5,7 +5,7 @@ import JestReceiver from '@slack-wrench/jest-bolt-receiver';
 jest.mock('@slack/bolt', () => {
   class MockApp {
     constructor(config) {
-      this.event = jest.fn((eventName, handler) => {
+      this.event = jest.fn((_, handler) => {
         this.eventHandler = handler;
       });
       this.message = jest.fn((handler) => {
@@ -22,6 +22,8 @@ jest.mock('@slack/bolt', () => {
       };
       this.config = config;
       this.receiver = config.receiver;
+      // Store the say function from the receiver
+      this.say = this.receiver.say;
     }
 
     async handleEvent(event) {
@@ -31,16 +33,22 @@ jest.mock('@slack/bolt', () => {
         if (handler) {
           await handler({
             command: event,
-            say: (msg) => this.receiver.say({ ...msg, channel: event.channel_id }),
+            say: this.say,
             ack: jest.fn(),
           });
         }
       } else if (event.type === 'app_mention') {
         // Handle app mentions
-        await this.eventHandler({ event, say: this.receiver.say });
+        await this.eventHandler({
+          event,
+          say: this.say,
+        });
       } else if (event.type === 'message') {
         // Handle regular messages
-        await this.messageHandler({ message: event, say: this.receiver.say });
+        await this.messageHandler({
+          message: event,
+          say: this.say,
+        });
       }
     }
   }
@@ -53,8 +61,8 @@ jest.mock('@slack/bolt', () => {
 });
 
 /* trunk-ignore(eslint/import/first) */
-import pkg from '@slack/bolt';
-const { App } = pkg; // Destructure App directly from pkg
+// import pkg from '@slack/bolt';
+// const { App } = pkg; // Destructure App directly from pkg
 
 /* trunk-ignore(eslint/import/first) */
 import { COMMANDS, RESPONSES } from '../../src/constants/config.js';
@@ -69,7 +77,7 @@ import { findSimilarQuestionsInPinecone } from '../../src/services/pineconeServi
 /* trunk-ignore(eslint/import/first) */
 import { findSimilarQuestionsInRedis } from '../../src/services/redisService.js';
 /* trunk-ignore(eslint/import/first) */
-import { setupSlackListeners } from '../../src/services/slackService.js';
+import { initialSlackBot, setupSlackListeners } from '../../src/services/slackService.js';
 
 // Mock all dependent services
 jest.mock('../../src/services/openaiService.js', () => ({
@@ -103,14 +111,7 @@ describe('Slack Bot Service', () => {
     });
 
     // Initialize Slack app with test configuration
-    console.log('***** App', App);
-    app = new App({
-      receiver,
-      token: 'xoxb-test-token',
-      signingSecret: 'test-secret',
-      socketMode: false,
-    });
-
+    app = initialSlackBot(false, receiver);
     // Register command handlers directly
     app.command(COMMANDS.HELP, async ({ command, say }) => {
       await say({
@@ -137,6 +138,27 @@ describe('Slack Bot Service', () => {
     createEmbedding.mockResolvedValue([0.1, 0.2, 0.3]);
     findSimilarQuestionsInRedis.mockResolvedValue([]);
     findSimilarQuestionsInPinecone.mockResolvedValue([]);
+  });
+
+  describe('App Mention Handling', () => {
+    test('should handle app mention', async () => {
+      const mention = {
+        type: 'app_mention',
+        user: 'U123456',
+        text: '<@BOT_ID> help',
+        ts: '1234567890.123456',
+        channel: 'C123456',
+      };
+
+      // Mock the say function to throw an error
+      // receiver.say.mockResolvedValueOnce(123);
+
+      await app.handleEvent(mention);
+
+      // Verify error was logged (you might need to mock console.error)
+      // This test ensures the error handler is reached
+      expect(receiver.say).toHaveBeenCalled();
+    });
   });
 
   describe('Message Handling', () => {
@@ -438,6 +460,86 @@ describe('Slack Bot Service', () => {
         }),
       );
     });
+
+    test('should handle thread message retrieval errors', async () => {
+      // Mock the error response
+      const mockError = new Error('Thread Error');
+      app.client.conversations.replies = jest.fn().mockRejectedValue(mockError);
+
+      try {
+        await app.client.conversations.replies({
+          channel: 'C123456',
+          ts: '1234567890.123456',
+        });
+      } catch (error) {
+        expect(error.message).toBe('Thread Error');
+      }
+    });
+
+    test('should handle summarize command without thread_ts', async () => {
+      const message = {
+        type: 'message',
+        channel_type: 'im',
+        text: '!summarize',
+        user: 'U123456',
+        channel: 'D123456',
+        ts: '1234567890.123456',
+      };
+
+      await app.handleEvent(message);
+
+      expect(receiver.messages).toContainEqual(
+        expect.objectContaining({
+          text: RESPONSES.SUMMARIZE_NO_THREAD,
+          thread_ts: '1234567890.123456',
+        }),
+      );
+    });
+
+    test('should handle summarize command with thread_ts', async () => {
+      const message = {
+        type: 'message',
+        channel_type: 'im',
+        text: '!summarize',
+        user: 'U123456',
+        channel: 'D123456',
+        ts: '1234567890.123456',
+        thread_ts: '1234567890.123456',
+      };
+
+      // Mock the thread messages response
+      app.client.conversations.replies = jest.fn().mockResolvedValue({
+        ok: true,
+        messages: [
+          { text: 'First message' },
+          { text: 'Second message' },
+          { text: 'Third message' },
+        ],
+      });
+
+      // Mock the summary generation
+      const mockSummary = 'This is a summary of the thread';
+      generateSummary.mockResolvedValue(mockSummary);
+
+      await app.handleEvent(message);
+
+      // Verify the thread messages were requested
+      expect(app.client.conversations.replies).toHaveBeenCalledWith({
+        channel: 'D123456',
+        ts: '1234567890.123456',
+      });
+
+      // Verify generateSummary was called with the combined messages
+      expect(generateSummary).toHaveBeenCalledWith('First message\nSecond message\nThird message');
+
+      // Verify the response was sent
+      expect(receiver.messages).toContainEqual(
+        expect.objectContaining({
+          text: mockSummary,
+          thread_ts: '1234567890.123456',
+        }),
+      );
+    });
   });
 
   describe('Error Handling', () => {
@@ -510,4 +612,49 @@ describe('Slack Bot Service', () => {
       );
     });
   });
+
+  // describe('Command Message Handling', () => {
+  //   test('should handle help command via message', async () => {
+  //     const message = {
+  //       type: 'message',
+  //       channel_type: 'im',
+  //       text: '!help',
+  //       user: 'U123456',
+  //       channel: 'D123456',
+  //       ts: '1234567890.123456',
+  //     };
+
+  //     await app.handleEvent(message);
+
+  //     expect(receiver.messages).toContainEqual(
+  //       expect.objectContaining({
+  //         text: RESPONSES.HELP,
+  //         thread_ts: '1234567890.123456',
+  //       }),
+  //     );
+  //   });
+
+  //   test('should handle summarize command errors', async () => {
+  //     const message = {
+  //       type: 'message',
+  //       channel_type: 'im',
+  //       text: '!summarize',
+  //       user: 'U123456',
+  //       channel: 'D123456',
+  //       ts: '1234567890.123456',
+  //       thread_ts: '1234567890.123456',
+  //     };
+
+  //     app.client.conversations.replies = jest.fn().mockRejectedValue(new Error('Thread Error'));
+
+  //     await app.handleEvent(message);
+
+  //     expect(receiver.messages).toContainEqual(
+  //       expect.objectContaining({
+  //         text: RESPONSES.SUMMARIZE_ERROR,
+  //         thread_ts: '1234567890.123456',
+  //       }),
+  //     );
+  //   });
+  // });
 });

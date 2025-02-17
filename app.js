@@ -5,7 +5,7 @@ import express from 'express';
 import { SERVER_CONFIG } from './src/constants/config.js';
 import router from './src/routes/router.js';
 import { createVectorIndex } from './src/services/redisService.js';
-import { setupSlackListeners, slackBot } from './src/services/slackService.js';
+import { initialSlackBot, setupSlackListeners } from './src/services/slackService.js';
 
 const server = express();
 server.use(express.json());
@@ -24,6 +24,7 @@ async function startServer() {
 
     // Start Slack bot
     console.log('Starting Slack bot...');
+    const slackBot = initialSlackBot();
     await slackBot.start();
     console.log('Slack bot is running!');
 

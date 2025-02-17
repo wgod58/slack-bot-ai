@@ -26,6 +26,9 @@ Need help? Try \`!help\` for a list of commands`,
     `Here are similar questions I've answered before:\n${questions
       .map((q, i) => `${i + 1}. Q: ${q.question}\nA: ${q.response}`)
       .join('\n\n')}`,
+
+  SUMMARIZE_ERROR: 'Error generating summary',
+  SUMMARIZE_NO_THREAD: 'This command must be used in a thread',
 };
 
 export const AI_CONFIG = {
