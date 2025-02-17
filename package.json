@@ -3,23 +3,21 @@
   "version": "1.0.0",
   "description": "Slack bot with OpenAI and RAG integration",
   "type": "module",
-  "main": "app.js",
   "engines": {
     "node": ">=18.0.0"
   },
   "scripts": {
-    "start": "node app.js",
-    "start:docker": "node dist/app.js",
-    "dev": "nodemon app.js",
+    "start": "node ./src/app.js",
+    "start:docker": "node ./index.js",
+    "dev": "nodemon ./src/app.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "fix": "npm run format && npm run lint:fix",
-    "build": "npm ci && npm run lint && npm run test && npm run build:js",
-    "build:js": "babel src --out-dir dist --source-maps --copy-files",
+    "fix": "yarn run format && yarn run lint:fix",
+    "build": "babel src --out-dir dist --source-maps --copy-files",
     "clean": "rm -rf node_modules dist"
   },
   "dependencies": {

@@ -2,9 +2,9 @@ import 'dotenv/config';
 
 import express from 'express';
 
-import router from './src/routes/router.js';
-import { createRedisVectorIndex } from './src/services/redisService.js';
-import { initialSlackBot, setupSlackListeners } from './src/services/slackService.js';
+import router from './routes/router.js';
+import { createRedisVectorIndex } from './services/redisService.js';
+import { initialSlackBot, setupSlackListeners } from './services/slackService.js';
 
 class App {
   constructor() {

@@ -1,7 +1,7 @@
 import { describe, expect, jest, test } from '@jest/globals';
 import express from 'express';
 
-import app from '../app.js';
+import app from '../src/app.js';
 import { SERVER_CONFIG } from '../src/constants/config.js';
 import { createRedisVectorIndex } from '../src/services/redisService.js';
 import { initialSlackBot, setupSlackListeners } from '../src/services/slackService.js';
