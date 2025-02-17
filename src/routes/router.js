@@ -11,9 +11,10 @@ router.get('/health', async (_, res) => {
     // Check Slack connection
     const slackBot = initialSlackBot();
     const slackStatus = await slackBot.client.auth.test().catch(() => null);
+
     // Check Redis connection
-    const pineconeStatus = !!pinecone;
     const redisStatus = await checkRedisHealth();
+    const pineconeStatus = !!pinecone;
 
     const health = {
       status: 'healthy',
