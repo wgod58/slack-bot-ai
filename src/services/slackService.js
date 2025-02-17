@@ -31,7 +31,6 @@ export async function getThreadMessages(channel, threadTs) {
     channel,
     ts: threadTs,
   });
-  console.log('threadMessages', threadMessages);
   return threadMessages.messages.map((m) => m.text);
 }
 
@@ -51,7 +50,6 @@ async function handleAppMention({ event, say }) {
     text: "Hello! I'm here to help. Use `!summarize` in a thread to get a summary.",
     thread_ts: event.thread_ts || event.ts,
   });
-  console.log('handleAppMention Bot mentioned: success');
 }
 
 // Handle incoming messages
@@ -59,7 +57,7 @@ async function handleMessage({ message, say }) {
   try {
     // Ignore bot messages
     if (message.subtype && message.subtype === 'bot_message') {
-      console.log('Bot message detected:', message);
+      console.log('Bot message detected');
       return; // Exit if the message is from a bot
     }
 
@@ -69,7 +67,6 @@ async function handleMessage({ message, say }) {
       return; // Exit if there's no user or text to process
     }
 
-    console.log('Received message:', message);
     const text = message.text.toLowerCase(); // Safely access text
 
     // Handle the message based on its content
@@ -87,12 +84,11 @@ async function handleMessage({ message, say }) {
     }
 
     if (text.includes('hello') || text.includes('hi')) {
-      console.log('hello or hi');
       await say({
         text: RESPONSES.WELCOME,
         thread_ts: message.thread_ts || message.ts,
       });
-      console.log('hello or hi success');
+
       return;
     }
 
@@ -107,7 +103,6 @@ async function handleMessage({ message, say }) {
       thread_ts: message.thread_ts || message.ts,
     });
   } catch (error) {
-    console.log('**************** error');
     console.error('Slack Error:', {
       error: error.message,
       data: error.data,
@@ -122,7 +117,6 @@ async function handleMessage({ message, say }) {
 
 // Handle summarize command
 async function handleSummarizeCommand(message, say) {
-  console.log('handleSummarizeCommand', message);
   try {
     if (!message.thread_ts) {
       await say({
