@@ -2,14 +2,13 @@
   "name": "slack-ai-bot",
   "version": "1.0.0",
   "description": "Slack bot with OpenAI and RAG integration",
-  "type": "module",
   "engines": {
     "node": ">=18.0.0"
   },
   "scripts": {
-    "start": "node ./src/app.js",
-    "start:docker": "node ./index.js",
-    "dev": "nodemon ./src/app.js",
+    "start": "node -r @babel/register ./src/app.js",
+    "start:docker": "node ./app.js",
+    "dev": "nodemon --exec \"node -r @babel/register\" ./src/app.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -21,6 +20,7 @@
     "clean": "rm -rf node_modules dist"
   },
   "dependencies": {
+    "@babel/node": "^7.23.9",
     "@babel/runtime": "^7.26.9",
     "@pinecone-database/pinecone": "^2.2.2",
     "@redis/client": "^1.5.14",
@@ -35,6 +35,7 @@
     "@babel/core": "^7.26.9",
     "@babel/plugin-transform-runtime": "^7.26.9",
     "@babel/preset-env": "^7.26.9",
+    "@babel/register": "^7.25.9",
     "@jest/globals": "^29.7.0",
     "@slack-wrench/jest-bolt-receiver": "^3.0.0",
     "eslint": "^8.57.1",

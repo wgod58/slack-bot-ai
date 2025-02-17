@@ -1,4 +1,4 @@
-import pkg from '@slack/bolt';
+import { App } from '@slack/bolt';
 
 import { COMMANDS, RESPONSES, SLACK_CONFIG } from '../constants/config.js';
 import { createEmbedding, generateResponse, generateSummary } from './openaiService.js';
@@ -8,7 +8,7 @@ import {
 } from './pineconeService.js';
 import { findSimilarQuestionsInRedis, storeQuestionVectorInRedis } from './redisService.js';
 
-const { App } = pkg;
+// const { App } = pkg;
 
 let slackBot;
 
