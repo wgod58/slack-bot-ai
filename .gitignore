@@ -81,4 +81,4 @@ out/
 
 # Backup files that might contain secrets
 *.bak
-*.swp
+*.swp.env.example

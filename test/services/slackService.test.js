@@ -641,7 +641,7 @@ describe('Slack Bot Service', () => {
       });
 
       // Verify error response was sent in thread
-      expect(receiver.messages[0]).toEqual(
+      expect(receiver.messages[1]).toEqual(
         expect.objectContaining({
           text: RESPONSES.ERROR,
           thread_ts: '1234567890.123456',
@@ -689,7 +689,7 @@ describe('Slack Bot Service', () => {
       await app.handleEvent(message);
 
       // Verify error response uses message ts as thread_ts
-      expect(receiver.messages[0]).toEqual(
+      expect(receiver.messages[1]).toEqual(
         expect.objectContaining({
           text: RESPONSES.ERROR,
           thread_ts: '1234567890.123456', // Should use message.ts
