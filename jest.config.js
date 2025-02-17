@@ -1,14 +1,12 @@
-export default {
+module.exports = {
   transform: {
-    '^.+\\.js$': 'babel-jest',
+    '^.+\\.jsx?$': 'babel-jest',
   },
   testEnvironment: 'node',
-  moduleFileExtensions: ['js'],
-  testMatch: ['<rootDir>/src/**/__tests__/**/*.test.js', '<rootDir>/test/**/*.test.js'],
-  clearMocks: true,
+  moduleFileExtensions: ['js', 'json'],
+  testMatch: ['**/test/**/*.test.js'],
+  collectCoverageFrom: ['src/**/*.js', 'app.js', '!src/constants/**', '!**/node_modules/**'],
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'lcov'],
   verbose: true,
-  coveragePathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/dist/'],
-  modulePathIgnorePatterns: ['<rootDir>/dist/'],
-  testTimeout: 30000,
-  setupFilesAfterEnv: ['./jest.setup.afterEnv.js'],
 };

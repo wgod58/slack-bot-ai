@@ -99,7 +99,7 @@ describe('Config Constants', () => {
         URL: process.env.REDIS_URL || 'redis://localhost:6379',
         USERNAME: process.env.REDIS_USERNAME,
         PASSWORD: process.env.REDIS_PASSWORD,
-        POST: process.env.REDIS_POST,
+        PORT: process.env.REDIS_PORT,
       });
     });
 

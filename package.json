@@ -9,7 +9,7 @@
     "start": "node -r @babel/register ./src/app.js",
     "start:docker": "node ./app.js",
     "dev": "nodemon --exec \"node -r @babel/register\" ./src/app.js",
-    "test": "jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint .",
