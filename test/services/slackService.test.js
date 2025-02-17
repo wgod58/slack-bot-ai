@@ -7,7 +7,10 @@ import {
   generateResponse,
   generateSummary,
 } from '../../src/services/openaiService.js';
-import { findSimilarQuestionsInPinecone } from '../../src/services/pineconeService.js';
+import {
+  findSimilarQuestionsInPinecone,
+  storeQuestionVectorInPinecone,
+} from '../../src/services/pineconeService.js';
 import {
   findSimilarQuestionsInRedis,
   storeQuestionVectorInRedis,
@@ -367,7 +370,6 @@ describe('Slack Bot Service', () => {
         channel: 'D123456',
         ts: '1234567890.123456',
       };
-
       const pineconeResponse = [
         {
           question: 'Similar question',
@@ -375,13 +377,10 @@ describe('Slack Bot Service', () => {
           score: 0.95,
         },
       ];
-
       createEmbedding.mockResolvedValueOnce([0.1, 0.2, 0.3]);
       findSimilarQuestionsInRedis.mockResolvedValueOnce([]); // No Redis hits
       findSimilarQuestionsInPinecone.mockResolvedValueOnce(pineconeResponse);
-
       await app.handleEvent(message);
-
       expect(findSimilarQuestionsInPinecone).toHaveBeenCalledWith([0.1, 0.2, 0.3]);
       expect(receiver.messages).toContainEqual(
         expect.objectContaining({
@@ -390,7 +389,6 @@ describe('Slack Bot Service', () => {
         }),
       );
     });
-
     test('should generate new response when no matches found', async () => {
       const message = {
         type: 'message',
@@ -399,25 +397,24 @@ describe('Slack Bot Service', () => {
         channel: 'D123456',
         ts: '1234567890.123456',
       };
-
       const mockResponse = 'The meaning of life is 42';
       const questionEmbedding = [0.1, 0.2, 0.3];
+      // Setup mocks in correct order
       createEmbedding.mockResolvedValueOnce(questionEmbedding);
-
       findSimilarQuestionsInRedis.mockResolvedValueOnce([]);
       findSimilarQuestionsInPinecone.mockResolvedValueOnce([]);
       generateResponse.mockResolvedValueOnce(mockResponse);
-
-      await handleQuestion(message, receiver.say);
-
+      storeQuestionVectorInRedis.mockResolvedValueOnce();
+      storeQuestionVectorInPinecone.mockResolvedValueOnce();
+      const say = jest.fn();
+      await handleQuestion(message, say);
+      expect(say).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: mockResponse,
+          thread_ts: message.ts,
+        }),
+      );
       expect(generateResponse).toHaveBeenCalledWith(message.text);
-      console.log('****** receiver.messages', receiver.messages);
-      // expect(receiver.messages[0]).toEqual(
-      //   expect.objectContaining({
-      //     text: mockResponse,
-      //     thread_ts: message.ts,
-      //   }),
-      // );
       expect(storeQuestionVectorInRedis).toHaveBeenCalledWith(
         message.text,
         mockResponse,
@@ -563,16 +560,19 @@ describe('Slack Bot Service', () => {
         ts: '1234567890.123456',
       };
 
-      createEmbedding.mockRejectedValueOnce(new Error('API Error'));
+      const say = jest.fn();
+      const error = new Error('API Error');
+      createEmbedding.mockRejectedValueOnce(error);
 
-      await handleQuestion(message, receiver.say);
+      await handleQuestion(message, say);
 
-      expect(receiver.messages[1]).toEqual(
+      expect(say).toHaveBeenCalledWith(
         expect.objectContaining({
           text: RESPONSES.QUESTION_ERROR,
           thread_ts: '1234567890.123456',
         }),
       );
+      expect(createEmbedding).toHaveBeenCalledWith(message.text);
     });
 
     test('should handle Redis errors gracefully', async () => {
@@ -584,18 +584,22 @@ describe('Slack Bot Service', () => {
         ts: '1234567890.123456',
       };
 
-      createEmbedding.mockResolvedValueOnce([0.1, 0.2, 0.3]);
-      findSimilarQuestionsInRedis.mockRejectedValueOnce(new Error('Redis Error'));
+      const say = jest.fn();
+      const questionEmbedding = [0.1, 0.2, 0.3];
+      createEmbedding.mockResolvedValueOnce(questionEmbedding);
+      const error = new Error('Redis Error');
+      findSimilarQuestionsInRedis.mockRejectedValueOnce(error);
 
-      await handleQuestion(message, receiver.say);
+      await handleQuestion(message, say);
 
-      expect(receiver.messages[0]).toEqual(
+      expect(say).toHaveBeenCalledWith(
         expect.objectContaining({
           text: RESPONSES.QUESTION_ERROR,
           thread_ts: '1234567890.123456',
         }),
       );
-      expect(findSimilarQuestionsInRedis).toHaveBeenCalled();
+      expect(findSimilarQuestionsInRedis).toHaveBeenCalledWith(questionEmbedding);
+      expect(createEmbedding).toHaveBeenCalledWith(message.text);
     });
 
     test('should handle Pinecone errors gracefully', async () => {

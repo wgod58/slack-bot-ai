@@ -146,8 +146,8 @@ async function handleSummarizeCommand(message, say) {
 
 // Handle questions
 async function handleQuestion(message, say) {
-  const questionEmbedding = await createEmbedding(message.text);
   try {
+    const questionEmbedding = await createEmbedding(message.text);
     // First check Redis for similar questions
     const redisSimilar = await findSimilarQuestionsInRedis(questionEmbedding);
     const bestRedisMatch = redisSimilar[0];
@@ -176,16 +176,15 @@ async function handleQuestion(message, say) {
     }
 
     // Generate new response if no good match found
-    response = await generateResponse(message.text);
+    const response = await generateResponse(message.text);
     await storeQuestionVectorInRedis(message.text, response, questionEmbedding);
     await storeQuestionVectorInPinecone(message.text, response, questionEmbedding);
-
     await say({
       text: response,
       thread_ts: message.thread_ts || message.ts,
     });
   } catch (error) {
-    console.error('Error handling question:', error);
+    console.error('Error handleQuestion:', error);
     await say({
       text: RESPONSES.QUESTION_ERROR,
       thread_ts: message.thread_ts || message.ts,
