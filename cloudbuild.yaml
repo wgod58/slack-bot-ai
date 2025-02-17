@@ -3,13 +3,16 @@ steps:
   - name: bash
     args: [mv, .env.example, .env]
     # install yarn
-  - name: gcr.io/cloud-builders/yarn
+  - name: node:18
+    entrypoint: yarn
     args: [install]
     # run test
-  - name: gcr.io/cloud-builders/yarn
+  - name: node:18
+    entrypoint: yarn
     args: [run, test]
     # build project
-  - name: gcr.io/cloud-builders/yarn
+  - name: node:18
+    entrypoint: yarn
     args: [run, build]
   # Build the container image
   - name: gcr.io/cloud-builders/docker
@@ -44,6 +47,8 @@ steps:
       - --max-instances
       - 10
       - --memory
-      - 512M
+      - 1Gi
       - --cpu
       - 1
+      - --cpu-boost
+      - --timeout=5m

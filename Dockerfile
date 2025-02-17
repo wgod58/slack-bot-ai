@@ -1,5 +1,5 @@
 # Use the official Node.js image as a base
-FROM node:18
+FROM node:18-slim
 
 # Create non-root user
 RUN groupadd -r nodejs && useradd -r -g nodejs -s /bin/false nodejs
@@ -10,11 +10,8 @@ WORKDIR /app
 # Copy package.json and package-lock.json
 COPY package*.json ./
 
-# Clean yarn cache
-RUN yarn cache clean
-
 # Install dependencies
-RUN yarn install
+RUN npm install
 
 # Copy build code
 COPY ./dist /app
@@ -32,7 +29,7 @@ USER nodejs
 EXPOSE 8080
 
 # Add HEALTHCHECK instruction
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD curl -f http://localhost:8080/ || exit 1
+HEALTHCHECK --interval=600s --timeout=5s --retries=3 CMD curl -f http://localhost:8080/api/up || exit 1
 
 # Command to run your application
-CMD [ "yarn","run","start:docker" ]
+CMD [ "node","./app.js" ]
