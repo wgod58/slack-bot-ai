@@ -28,7 +28,6 @@ redisClient.on('reconnecting', () => {
 
 async function configureRedis() {
   try {
-    console.log('Configuring Redis settings...');
     await redisClient.call('CONFIG', 'SET', 'maxmemory', '500mb');
     await redisClient.call('CONFIG', 'SET', 'maxmemory-policy', 'allkeys-lfu');
     await redisClient.call('CONFIG', 'SET', 'maxmemory-samples', '10');
@@ -44,7 +43,6 @@ function float32ArrayToBuffer(array) {
 }
 
 async function createRedisVectorIndex() {
-  console.log('Creating vector index...');
   try {
     const createIndexCommand = [
       'FT.CREATE',
@@ -78,7 +76,6 @@ async function createRedisVectorIndex() {
     ];
 
     await redisClient.call(...createIndexCommand);
-    console.log('Vector index created successfully');
   } catch (e) {
     if (e.message.includes('Index already exists')) {
       console.log('Index already exists');
@@ -90,7 +87,6 @@ async function createRedisVectorIndex() {
 }
 
 async function storeQuestionVectorInRedis(question, response, vector) {
-  console.log('Storing question vector...');
   try {
     const id = `question:${Date.now()}`;
     await redisClient.call(
@@ -112,7 +108,6 @@ async function storeQuestionVectorInRedis(question, response, vector) {
 }
 
 async function findSimilarQuestionsInRedis(vector, limit = 5) {
-  console.log('Searching similar questions...');
   try {
     const searchCommand = [
       'FT.SEARCH',
@@ -142,7 +137,6 @@ async function findSimilarQuestionsInRedis(vector, limit = 5) {
 }
 
 function parseSearchResults(results) {
-  console.log('results', results);
   if (!results || results.length < 2) return [];
 
   const documents = [];
