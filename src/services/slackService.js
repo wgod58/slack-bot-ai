@@ -55,6 +55,7 @@ async function handleAppMention({ event, say }) {
 // Handle incoming messages
 async function handleMessage({ message, say }) {
   try {
+    console.log('handleMessage received message:', message);
     // Ignore bot messages
     if (message.subtype && message.subtype === 'bot_message') {
       console.log('Bot message detected');
@@ -66,6 +67,10 @@ async function handleMessage({ message, say }) {
       console.warn('Received a message without a user or text');
       return; // Exit if there's no user or text to process
     }
+    await say({
+      text: RESPONSES.WORKING,
+      thread_ts: message.thread_ts || message.ts,
+    });
 
     const text = message.text.toLowerCase(); // Safely access text
 

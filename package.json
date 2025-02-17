@@ -4,6 +4,9 @@
   "description": "Slack bot with OpenAI and RAG integration",
   "type": "module",
   "main": "app.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
@@ -31,9 +34,7 @@
     "@babel/plugin-transform-runtime": "^7.26.9",
     "@babel/preset-env": "^7.26.9",
     "@jest/globals": "^29.7.0",
-    "@slack-wrench/fixtures": "^2.2.4",
     "@slack-wrench/jest-bolt-receiver": "^3.0.0",
-    "@slack-wrench/jest-mock-web-client": "^1.4.0",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.0",
     "eslint-config-standard": "^17.1.0",

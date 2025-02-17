@@ -4,6 +4,7 @@ export const COMMANDS = {
 };
 
 export const RESPONSES = {
+  WORKING: 'Working on it...',
   WELCOME: `👋 Hello! I'm your AI assistant. I can help you with:
 • Summarizing threads (use \`!summarize\` in a thread)
 • Answering questions (just end with a ? mark)
