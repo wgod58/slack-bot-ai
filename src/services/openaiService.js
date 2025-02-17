@@ -7,8 +7,6 @@ const openai = new OpenAI({
 });
 
 async function generateSummary(messages) {
-  console.log('Generating summary...');
-  console.log(messages);
   const prompt = `Please summarize this conversation:\n${messages}`;
 
   try {
