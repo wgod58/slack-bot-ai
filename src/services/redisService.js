@@ -4,7 +4,7 @@ import { REDIS_CONFIG } from '../constants/config.js';
 
 const redisClient = new Redis({
   host: REDIS_CONFIG.HOST,
-  port: REDIS_CONFIG.PORT || 6379,
+  port: parseInt(REDIS_CONFIG.PORT),
   username: REDIS_CONFIG.USERNAME,
   password: REDIS_CONFIG.PASSWORD,
   maxRetriesPerRequest: 3,
@@ -15,7 +15,6 @@ const redisClient = new Redis({
 
 redisClient.on('connect', () => {
   console.log('Redis Client Connected');
-  configureRedis();
 });
 
 redisClient.on('error', (err) => {
@@ -25,18 +24,6 @@ redisClient.on('error', (err) => {
 redisClient.on('reconnecting', () => {
   console.log('Redis Client Reconnecting...');
 });
-
-async function configureRedis() {
-  try {
-    await redisClient.call('CONFIG', 'SET', 'maxmemory', '500mb');
-    await redisClient.call('CONFIG', 'SET', 'maxmemory-policy', 'allkeys-lfu');
-    await redisClient.call('CONFIG', 'SET', 'maxmemory-samples', '10');
-    console.log('Redis configured successfully.');
-  } catch (error) {
-    console.error('Error configuring Redis:', error);
-    throw error;
-  }
-}
 
 function float32ArrayToBuffer(array) {
   return Buffer.from(new Float32Array(array).buffer);
@@ -180,7 +167,6 @@ async function checkHealth() {
 
 export {
   checkHealth,
-  configureRedis,
   createRedisVectorIndex,
   findSimilarQuestionsInRedis,
   redisClient,

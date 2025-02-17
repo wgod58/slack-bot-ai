@@ -50,6 +50,7 @@ export const AI_CONFIG = {
 Be concise but friendly in your responses, and provide practical, production-ready solutions when applicable. If relevant, include best practices and potential pitfalls to watch out for.`,
   },
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  MATCH_SCORE: 0.92,
 };
 
 export const SLACK_CONFIG = {
@@ -67,8 +68,8 @@ export const SERVER_CONFIG = {
 };
 
 export const REDIS_CONFIG = {
-  URL: process.env.REDIS_URL || 'redis://localhost:6379',
+  HOST: process.env.REDIS_HOST || 'localhost',
   USERNAME: process.env.REDIS_USERNAME,
   PASSWORD: process.env.REDIS_PASSWORD,
-  POST: process.env.REDIS_POST,
+  PORT: process.env.REDIS_PORT,
 };

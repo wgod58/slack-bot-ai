@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, jest, test } from '@jest/globals';
 
 import {
   checkHealth,
-  configureRedis,
   createRedisVectorIndex,
   findSimilarQuestionsInRedis,
   redisClient,
@@ -22,44 +21,6 @@ describe('Redis Service', () => {
     redisClient.ping = jest.fn();
     redisClient.keys = jest.fn();
     redisClient.get = jest.fn();
-  });
-
-  describe('configureRedis', () => {
-    test('should configure Redis settings successfully', async () => {
-      redisClient.call
-        .mockResolvedValueOnce('OK')
-        .mockResolvedValueOnce('OK')
-        .mockResolvedValueOnce('OK');
-
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-
-      await configureRedis();
-
-      expect(redisClient.call).toHaveBeenCalledWith('CONFIG', 'SET', 'maxmemory', '500mb');
-      expect(redisClient.call).toHaveBeenCalledWith(
-        'CONFIG',
-        'SET',
-        'maxmemory-policy',
-        'allkeys-lfu',
-      );
-      expect(redisClient.call).toHaveBeenCalledWith('CONFIG', 'SET', 'maxmemory-samples', '10');
-      expect(consoleSpy).toHaveBeenCalledWith('Redis configured successfully.');
-
-      consoleSpy.mockRestore();
-    });
-
-    test('should handle configuration errors', async () => {
-      const mockError = new Error('Configuration failed');
-
-      redisClient.call.mockRejectedValueOnce(mockError);
-
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-
-      await expect(configureRedis()).rejects.toThrow('Configuration failed');
-      expect(consoleSpy).toHaveBeenCalledWith('Error configuring Redis:', mockError);
-
-      consoleSpy.mockRestore();
-    });
   });
 
   describe('createRedisVectorIndex', () => {
