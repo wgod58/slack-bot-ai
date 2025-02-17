@@ -43,7 +43,7 @@ function float32ArrayToBuffer(array) {
   return Buffer.from(new Float32Array(array).buffer);
 }
 
-async function createVectorIndex() {
+async function createRedisVectorIndex() {
   console.log('Creating vector index...');
   try {
     const createIndexCommand = [
@@ -187,7 +187,7 @@ async function checkHealth() {
 export {
   checkHealth,
   configureRedis,
-  createVectorIndex,
+  createRedisVectorIndex,
   findSimilarQuestionsInRedis,
   redisClient,
   storeQuestionVectorInRedis,

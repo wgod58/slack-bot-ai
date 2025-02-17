@@ -3,7 +3,7 @@ import express from 'express';
 
 import app from '../app.js';
 import { SERVER_CONFIG } from '../src/constants/config.js';
-import { createVectorIndex } from '../src/services/redisService.js';
+import { createRedisVectorIndex } from '../src/services/redisService.js';
 import { initialSlackBot, setupSlackListeners } from '../src/services/slackService.js';
 
 // Mock express
@@ -19,7 +19,7 @@ jest.mock('express', () => {
 
 // Mock services
 jest.mock('../src/services/redisService.js', () => ({
-  createVectorIndex: jest.fn().mockResolvedValue(undefined),
+  createRedisVectorIndex: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('../src/services/slackService.js', () => ({
@@ -59,8 +59,8 @@ describe('App', () => {
     test('should create vector index', async () => {
       await app.initialize();
 
-      expect(createVectorIndex).toHaveBeenCalled();
-      expect(consoleSpy).toHaveBeenCalledWith('Vector index created successfully');
+      expect(createRedisVectorIndex).toHaveBeenCalled();
+      expect(consoleSpy).toHaveBeenCalledWith('Redis vector index created successfully');
     });
 
     test('should start Slack bot', async () => {
@@ -78,7 +78,7 @@ describe('App', () => {
 
     test('should handle initialization errors', async () => {
       const mockError = new Error('Initialization failed');
-      createVectorIndex.mockRejectedValueOnce(mockError);
+      createRedisVectorIndex.mockRejectedValueOnce(mockError);
 
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 

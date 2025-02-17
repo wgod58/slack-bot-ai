@@ -3,7 +3,7 @@ import 'dotenv/config';
 import express from 'express';
 
 import router from './src/routes/router.js';
-import { createVectorIndex } from './src/services/redisService.js';
+import { createRedisVectorIndex } from './src/services/redisService.js';
 import { initialSlackBot, setupSlackListeners } from './src/services/slackService.js';
 
 class App {
@@ -14,19 +14,15 @@ class App {
 
   async initialize() {
     try {
-      console.log('Starting server...');
-
       // Setup middleware
       this.server.use(express.json());
       this.server.use(router);
 
       // Initialize Redis vector index
-      console.log('Initializing Redis vector index...');
-      await createVectorIndex();
-      console.log('Vector index created successfully');
+      await createRedisVectorIndex();
+      console.log('Redis vector index created successfully');
 
       // Start Slack bot
-      console.log('Starting Slack bot...');
       this.slackBot = initialSlackBot();
       await this.slackBot.start();
       console.log('Slack bot is running!');

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, jest, test } from '@jest/globals';
 import {
   checkHealth,
   configureRedis,
-  createVectorIndex,
+  createRedisVectorIndex,
   findSimilarQuestionsInRedis,
   redisClient,
   storeQuestionVectorInRedis,
@@ -62,13 +62,13 @@ describe('Redis Service', () => {
     });
   });
 
-  describe('createVectorIndex', () => {
+  describe('createRedisVectorIndex', () => {
     test('should create vector index successfully', async () => {
       redisClient.call.mockResolvedValueOnce('OK');
 
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
-      await createVectorIndex();
+      await createRedisVectorIndex();
 
       expect(redisClient.call).toHaveBeenCalledWith(
         'FT.CREATE',
@@ -110,7 +110,7 @@ describe('Redis Service', () => {
 
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-      await expect(createVectorIndex()).rejects.toThrow('Index creation failed');
+      await expect(createRedisVectorIndex()).rejects.toThrow('Index creation failed');
       expect(consoleSpy).toHaveBeenCalledWith('Error creating vector index:', mockError);
 
       consoleSpy.mockRestore();
@@ -122,7 +122,7 @@ describe('Redis Service', () => {
 
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
-      await createVectorIndex();
+      await createRedisVectorIndex();
 
       expect(consoleSpy).toHaveBeenCalledWith('Index already exists');
       consoleSpy.mockRestore();
