@@ -42,7 +42,7 @@ steps:
       - '--image'
       - 'gcr.io/$PROJECT_ID/slack-bot:$SHORT_SHA'
       - '--region'
-      - 'asia-east1'
+      - 'us-east1'
       - '--platform'
       - 'managed'
       - '--max-instances'
