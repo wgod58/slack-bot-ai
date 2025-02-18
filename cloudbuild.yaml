@@ -58,3 +58,4 @@ steps:
       - '1'
       - '--cpu-boost'
       - '--timeout=5m'
+      - '--allow-unauthenticated'
