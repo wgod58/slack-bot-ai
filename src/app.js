@@ -5,6 +5,7 @@ import express from 'express';
 import router from './routes/router.js';
 import { createRedisVectorIndex } from './services/redisService.js';
 import { initialSlackBot, setupSlackListeners } from './services/slackService.js';
+import { pinecone } from './services/pineconeService.js';
 
 class App {
   constructor() {
@@ -26,6 +27,9 @@ class App {
       this.slackBot = initialSlackBot();
       await this.slackBot.start();
       console.log('Slack bot is running!');
+
+      const indexes = await pinecone.listIndexes();
+      console.log('Indexes:', indexes);
 
       // Setup Slack listeners
       console.log('Setting up Slack listeners...');
