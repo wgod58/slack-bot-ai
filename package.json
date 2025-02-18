@@ -2,6 +2,7 @@
   "name": "slack-ai-bot",
   "version": "1.0.0",
   "description": "Slack bot with OpenAI and RAG integration",
+  "license": "MIT",
   "engines": {
     "node": ">=18.18.0"
   },
