@@ -15,7 +15,7 @@ A sophisticated Slack bot that leverages OpenAI's GPT-4, Redis Stack, and Pineco
 
 ### Core Technologies
 
-- NodeJs (≥18.0.0)
+- NodeJs (≥18.18.0)
 - Express
 - Slack Bolt Framework
 - OpenAI API (GPT-4 & Embeddings)
@@ -110,34 +110,6 @@ graph TD
    - Text embeddings for vector search
    - Context-aware response formatting
 
-### Distributed System Architecture
-
-1. **Consistent Hashing Implementation**
-
-   ```mermaid
-   graph TD
-       A[Question Input] --> B[Hash Function]
-       B --> C[Hash Ring]
-       C --> D{Node Selection}
-       D --> E[Redis Node 1]
-       D --> F[Redis Node 2]
-       D --> G[Redis Node N]
-       D --> H[Pinecone Shard 1]
-       D --> I[Pinecone Shard 2]
-       D --> J[Pinecone Shard N]
-   ```
-
-2. **Key Distribution Strategy**
-   - Virtual nodes for better distribution
-   - Minimal redistribution on node changes
-   - Configurable replication factor
-
-3. **Benefits**
-   - Even data distribution
-   - Automatic scaling
-   - Minimal data movement
-   - High availability
-
 ### Data Flow
 
 1. **Question Processing**
@@ -179,6 +151,15 @@ graph TD
   - Fallback mechanisms
   - Error handling and retry logic
   - Monitoring and logging
+
+## Performance Optimizations
+
+- Redis Stack implementation for vector similarity search
+- Efficient caching strategy for frequently asked questions
+- Asynchronous response storage in both Redis and Pinecone
+- Optimized vector search with cosine similarity
+- Automatic scaling with Heroku
+- Container-based deployment
 
 ## System Bottlenecks & Future Improvements
 
@@ -241,9 +222,38 @@ graph TD
    - Automated failover systems
    - A/B testing infrastructure
 
+### Distributed System Architecture
+
+1. **Consistent Hashing Implementation**
+
+   ```mermaid
+   graph TD
+       A[Question Input] --> B[Hash Function]
+       B --> C[Hash Ring]
+       C --> D{Node Selection}
+       D --> E[Redis Node 1]
+       D --> F[Redis Node 2]
+       D --> G[Redis Node N]
+       D --> H[Pinecone Shard 1]
+       D --> I[Pinecone Shard 2]
+       D --> J[Pinecone Shard N]
+   ```
+
+2. **Key Distribution Strategy**
+   - Virtual nodes for better distribution
+   - Minimal redistribution on node changes
+   - Configurable replication factor
+
+3. **Benefits**
+   - Even data distribution
+   - Automatic scaling
+   - Minimal data movement
+   - High availability
+
 ### Implementation Priority
 
 1. **Short-term**
+   - Advanced caching strategies (LFU or LRU)
    - Message queue implementation
    - Enhanced error handling
    - Improved monitoring
@@ -254,17 +264,7 @@ graph TD
 
 3. **Long-term**
    - Distributed vector search on Redis and Pinecone
-   - Advanced caching strategies (LFU or LRU)
    - Full observability system
-
-## Performance Optimizations
-
-- Redis Stack implementation for vector similarity search
-- Efficient caching strategy for frequently asked questions
-- Asynchronous response storage in both Redis and Pinecone
-- Optimized vector search with cosine similarity
-- Automatic scaling with Heroku
-- Container-based deployment
 
 ## Setup & Installation
 
