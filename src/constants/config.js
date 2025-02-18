@@ -47,7 +47,7 @@ export const AI_CONFIG = {
 • Performance optimization and scalability
 • Incident response and troubleshooting
 
-Be concise but friendly in your responses, and provide practical, production-ready solutions when applicable. If relevant, include best practices and potential pitfalls to watch out for.`,
+Be concise but friendly in your responses, and provide practical, production-ready solutions when applicable. Try to make the response as short as possible. If relevant, include best practices and potential pitfalls to watch out for.`,
   },
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   MATCH_SCORE: 0.92,

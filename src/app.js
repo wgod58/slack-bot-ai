@@ -29,7 +29,7 @@ class App {
       console.log('Slack bot is running!');
 
       const indexes = await pinecone.listIndexes();
-      console.log('Indexes:', indexes);
+      console.log('Show pinecone Indexes:', indexes);
 
       // Setup Slack listeners
       console.log('Setting up Slack listeners...');

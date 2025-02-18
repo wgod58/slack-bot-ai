@@ -149,6 +149,7 @@ async function handleQuestion(message, say) {
   try {
     const questionEmbedding = await createEmbedding(message.text);
     // First check Redis for similar questions
+    console.log('Finding similar questions in Redis');
     const redisSimilar = await findSimilarQuestionsInRedis(questionEmbedding);
     const bestRedisMatch = redisSimilar[0];
 
@@ -162,6 +163,7 @@ async function handleQuestion(message, say) {
     }
 
     // If not in Redis, check Pinecone
+    console.log('Finding similar questions in Pinecone');
     const similarQuestions = await findSimilarQuestionsInPinecone(questionEmbedding);
     const bestMatch = similarQuestions[0];
 
@@ -171,18 +173,25 @@ async function handleQuestion(message, say) {
         text: `I found a similar question! Here's the answer:\n${bestMatch.response}`,
         thread_ts: message.thread_ts || message.ts,
       });
+      console.log('Storing question in Redis');
       await storeQuestionVectorInRedis(message.text, bestMatch.response, questionEmbedding);
       return;
     }
 
     // Generate new response if no good match found
+    console.log('Generating new response from OpenAI');
     const response = await generateResponse(message.text);
-    await storeQuestionVectorInRedis(message.text, response, questionEmbedding);
-    await storeQuestionVectorInPinecone(message.text, response, questionEmbedding);
+
+    console.log('Sending response to Slack');
     await say({
       text: response,
       thread_ts: message.thread_ts || message.ts,
     });
+
+    console.log('Storing question in Redis');
+    await storeQuestionVectorInRedis(message.text, response, questionEmbedding);
+    console.log('Storing question in Pinecone');
+    await storeQuestionVectorInPinecone(message.text, response, questionEmbedding);
   } catch (error) {
     console.log('Error handleQuestion:', error);
     await say({

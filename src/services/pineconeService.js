@@ -4,8 +4,6 @@ import { PINECONE_CONFIG } from '../constants/config.js';
 
 const INDEX_NAME = 'slack-bot';
 
-console.log('PINECONE_CONFIG.API_KEY', PINECONE_CONFIG.API_KEY);
-
 const pinecone = new Pinecone({
   apiKey: PINECONE_CONFIG.API_KEY,
 });
