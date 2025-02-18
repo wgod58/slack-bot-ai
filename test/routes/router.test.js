@@ -28,6 +28,10 @@ jest.mock('../../src/services/pineconeService.js', () => ({
 describe('Router', () => {
   let app;
 
+  beforeAll(() => {
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     app = express();

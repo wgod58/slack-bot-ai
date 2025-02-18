@@ -33,7 +33,7 @@ class App {
 
       return this;
     } catch (error) {
-      console.error('Error starting server:', error);
+      console.log('Error starting server:', error);
       throw error;
     }
   }
@@ -43,7 +43,7 @@ class App {
       const PORT = process.env.PORT;
       this.server.listen(PORT, (error) => {
         if (error) {
-          console.error('Error starting server:', error);
+          console.log('Error starting server:', error);
           reject(error);
           return;
         }

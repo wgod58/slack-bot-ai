@@ -38,6 +38,10 @@ jest.mock('../src/routes/router.js', () => ({
 describe('App', () => {
   let consoleSpy;
 
+  beforeAll(() => {
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -80,7 +84,7 @@ describe('App', () => {
       const mockError = new Error('Initialization failed');
       createRedisVectorIndex.mockRejectedValueOnce(mockError);
 
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
       await expect(app.initialize()).rejects.toThrow('Initialization failed');
 
@@ -104,7 +108,7 @@ describe('App', () => {
       const mockError = new Error('Server start failed');
       app.server.listen = jest.fn((_, cb) => cb(mockError));
 
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
       await app.initialize();
       await expect(app.start()).rejects.toThrow('Server start failed');

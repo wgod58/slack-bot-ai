@@ -13,18 +13,6 @@ const redisClient = new Redis({
   connectTimeout: 10000,
 });
 
-redisClient.on('connect', () => {
-  console.log('Redis Client Connected');
-});
-
-redisClient.on('error', (err) => {
-  console.error('Redis Client Error:', err);
-});
-
-redisClient.on('reconnecting', () => {
-  console.log('Redis Client Reconnecting...');
-});
-
 function float32ArrayToBuffer(array) {
   return Buffer.from(new Float32Array(array).buffer);
 }
@@ -67,7 +55,7 @@ async function createRedisVectorIndex() {
     if (e.message.includes('Index already exists')) {
       console.log('Index already exists');
     } else {
-      console.error('Error creating vector index:', e);
+      console.log('Error creating vector index:', e);
       throw e;
     }
   }
@@ -89,7 +77,7 @@ async function storeQuestionVectorInRedis(question, response, vector) {
     );
     console.log('Stored redis question vector:', id);
   } catch (error) {
-    console.error('Error storing redis question vector:', error);
+    console.log('Error storing redis question vector:', error);
     throw error;
   }
 }
@@ -118,7 +106,7 @@ async function findSimilarQuestionsInRedis(vector, limit = 5) {
     const results = await redisClient.call(...searchCommand);
     return parseSearchResults(results);
   } catch (error) {
-    console.error('Error searching similar questions:', error);
+    console.log('Error searching similar questions:', error);
     throw error;
   }
 }
@@ -160,7 +148,7 @@ async function checkHealth() {
     const ping = await redisClient.ping();
     return ping === 'PONG';
   } catch (error) {
-    console.error('Redis health check failed:', error);
+    console.log('Redis health check failed:', error);
     return false;
   }
 }

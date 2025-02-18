@@ -17,7 +17,7 @@ async function generateSummary(messages) {
 
     return completion.choices[0].message.content;
   } catch (error) {
-    console.error('OpenAI Error:', {
+    console.log('OpenAI Error:', {
       message: error.message,
       status: error.status,
       type: error.type,
@@ -44,7 +44,7 @@ async function generateResponse(question) {
 
     return completion.choices[0].message.content;
   } catch (error) {
-    console.error('OpenAI Error:', {
+    console.log('OpenAI Error:', {
       message: error.message,
       status: error.status,
       type: error.type,
@@ -62,7 +62,7 @@ async function createEmbedding(text) {
 
     return response.data[0].embedding;
   } catch (error) {
-    console.error('Error creating embedding:', {
+    console.log('Error creating embedding:', {
       message: error.message,
       status: error.status,
       type: error.type,

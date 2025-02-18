@@ -106,7 +106,7 @@ async function handleMessage({ message, say }) {
       thread_ts: message.thread_ts || message.ts,
     });
   } catch (error) {
-    console.error('Slack Error:', {
+    console.log('Slack Error:', {
       error: error.message,
       data: error.data,
       stack: error.stack,
@@ -136,7 +136,7 @@ async function handleSummarizeCommand(message, say) {
       thread_ts: message.thread_ts,
     });
   } catch (error) {
-    console.error('Error generating summary:', error);
+    console.log('Error generating summary:', error);
     await say({
       text: RESPONSES.SUMMARIZE_ERROR,
       thread_ts: message.thread_ts || message.ts,
@@ -184,7 +184,7 @@ async function handleQuestion(message, say) {
       thread_ts: message.thread_ts || message.ts,
     });
   } catch (error) {
-    console.error('Error handleQuestion:', error);
+    console.log('Error handleQuestion:', error);
     await say({
       text: RESPONSES.QUESTION_ERROR,
       thread_ts: message.thread_ts || message.ts,

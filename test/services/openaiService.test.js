@@ -30,6 +30,10 @@ jest.mock('openai', () => {
 describe('OpenAI Service', () => {
   const mockOpenAI = openai;
 
+  beforeAll(() => {
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -133,8 +137,8 @@ describe('OpenAI Service', () => {
   });
 
   describe('Error Handling', () => {
-    test('should include error details in console.error', async () => {
-      const consoleSpy = jest.spyOn(console, 'error');
+    test('should include error details in console.log', async () => {
+      const consoleSpy = jest.spyOn(console, 'log');
       const mockError = {
         message: 'API Error',
         status: 429,

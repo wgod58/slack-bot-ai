@@ -13,6 +13,10 @@ import {
 jest.mock('ioredis', () => require('ioredis-mock'));
 
 describe('Redis Service', () => {
+  beforeAll(() => {
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
 
@@ -69,7 +73,7 @@ describe('Redis Service', () => {
       const mockError = new Error('Index creation failed');
       redisClient.call.mockRejectedValueOnce(mockError);
 
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
       await expect(createRedisVectorIndex()).rejects.toThrow('Index creation failed');
       expect(consoleSpy).toHaveBeenCalledWith('Error creating vector index:', mockError);
@@ -143,7 +147,7 @@ describe('Redis Service', () => {
       const mockError = new Error('Storage failed');
       redisClient.call.mockRejectedValueOnce(mockError);
 
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
       const question = 'What is Redis?';
       const response = 'Redis is an in-memory database';
@@ -158,7 +162,7 @@ describe('Redis Service', () => {
     });
 
     test('should validate input parameters', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
       await expect(storeQuestionVectorInRedis()).rejects.toThrow();
       await expect(storeQuestionVectorInRedis('test')).rejects.toThrow();
@@ -198,7 +202,7 @@ describe('Redis Service', () => {
       const mockError = new Error('Search failed');
       redisClient.call.mockRejectedValueOnce(mockError);
 
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
       await expect(findSimilarQuestionsInRedis([0.1, 0.2, 0.3])).rejects.toThrow('Search failed');
 
@@ -223,38 +227,6 @@ describe('Redis Service', () => {
         'Unexpected field structure for document:',
         'question:1',
       );
-      consoleSpy.mockRestore();
-    });
-  });
-
-  // Add Redis Client Events tests
-  describe('Redis Client Events', () => {
-    test('should handle reconnecting event', () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-
-      // Trigger reconnecting event
-      redisClient.emit('reconnecting');
-
-      expect(consoleSpy).toHaveBeenCalledWith('Redis Client Reconnecting...');
-      consoleSpy.mockRestore();
-    });
-
-    test('should handle connect event', () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-
-      // Trigger connect event
-      redisClient.emit('connect');
-
-      expect(consoleSpy).toHaveBeenCalledWith('Redis Client Connected');
-      consoleSpy.mockRestore();
-    });
-
-    test('should handle error event', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-
-      redisClient.emit('error');
-
-      expect(consoleSpy).toBeCalled();
       consoleSpy.mockRestore();
     });
   });

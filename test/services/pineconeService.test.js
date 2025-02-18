@@ -20,6 +20,10 @@ jest.mock('@pinecone-database/pinecone', () => ({
 }));
 
 describe('Pinecone Service', () => {
+  beforeAll(() => {
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     // Reset mock implementations
@@ -141,7 +145,7 @@ describe('Pinecone Service', () => {
 
   describe('Error Logging', () => {
     test('should log errors with details', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
       const mockError = new Error('Test error');
       mockQuery.mockRejectedValueOnce(mockError);
 

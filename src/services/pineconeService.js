@@ -26,7 +26,7 @@ async function storeQuestionVectorInPinecone(question, response, questionEmbeddi
 
     console.log('Stored Q&A pair in Pinecone');
   } catch (error) {
-    console.error('Error storing in Pinecone:', error);
+    console.log('Error storing in Pinecone:', error);
     throw error;
   }
 }
@@ -50,7 +50,7 @@ async function findSimilarQuestionsInPinecone(questionEmbedding, limit = 5) {
         score: match.score,
       }));
   } catch (error) {
-    console.error('Error querying Pinecone:', error);
+    console.log('Error querying Pinecone:', error);
     throw error;
   }
 }

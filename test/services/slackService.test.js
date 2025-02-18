@@ -101,6 +101,10 @@ describe('Slack Bot Service', () => {
   let receiver;
   let app;
 
+  beforeAll(() => {
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
 
@@ -156,7 +160,7 @@ describe('Slack Bot Service', () => {
 
       await app.handleEvent(mention);
 
-      // Verify error was logged (you might need to mock console.error)
+      // Verify error was logged (you might need to mock console.log)
       // This test ensures the error handler is reached
       expect(receiver.say).toHaveBeenCalled();
     });
@@ -642,8 +646,8 @@ describe('Slack Bot Service', () => {
       mockError.data = { error: 'invalid_auth' };
       mockError.stack = 'Error stack trace';
 
-      // Mock console.error to prevent actual logging
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      // Mock console.log to prevent actual logging
+      const consoleErrorSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
       const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
       // Force an error by making the RESPONSES.WELCOME access throw
@@ -697,8 +701,8 @@ describe('Slack Bot Service', () => {
       mockError.data = { error: 'invalid_auth' };
       mockError.stack = 'Error stack trace';
 
-      // Mock console.error to prevent actual logging
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      // Mock console.log to prevent actual logging
+      const consoleErrorSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
       const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
       // Force an error by making the RESPONSES.WELCOME access throw
