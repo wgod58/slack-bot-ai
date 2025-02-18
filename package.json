@@ -19,6 +19,7 @@
     "build": "babel src --out-dir dist --source-maps --copy-files",
     "clean": "rm -rf node_modules dist",
     "precommit": "yarn lint && yarn test",
+    "prepush": "yarn test",
     "prepare": "husky install"
   },
   "dependencies": {
