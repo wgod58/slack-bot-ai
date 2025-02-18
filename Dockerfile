@@ -16,9 +16,6 @@ RUN npm install
 # Copy build code
 COPY ./dist /app
 
-# Copy .env file
-COPY ./.env /app
-
 # Set ownership and permissions
 RUN chown -R nodejs:nodejs /app
 

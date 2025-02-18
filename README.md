@@ -85,3 +85,52 @@ graph LR
 ## Setup & Installation
 
 1. Clone the repository:
+
+```
+
+## Deployment
+
+### Environment Variables
+
+Required environment variables:
+```
+
+SLACK_BOT_TOKEN=
+SLACK_SIGNING_SECRET=
+SLACK_APP_TOKEN=
+OPENAI_API_KEY=
+PINECONE_API_KEY=
+PINECONE_INDEX_NAME=
+REDIS_HOST=
+REDIS_USERNAME=
+REDIS_PASSWORD=
+REDIS_PORT=
+PORT=8080
+
+```
+
+### CI/CD Pipeline
+
+The project uses GitHub Actions for CI/CD:
+
+1. **CI Stage**:
+   - Runs linting
+   - Runs tests
+   - Builds application
+
+2. **CD Stage**:
+   - Builds Docker image
+   - Deploys to Heroku
+
+### Manual Deployment
+
+```bash
+# Login to Heroku
+heroku login
+
+# Push to Heroku
+git push heroku main
+
+# View logs
+heroku logs --tail
+```
