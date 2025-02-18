@@ -39,9 +39,6 @@ jobs:
       - name: Run Tests
         run: yarn test
 
-      - name: Build
-        run: yarn build
-
   deploy:
     needs: test
     if: github.ref == 'refs/heads/master'
@@ -52,6 +49,18 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+
+      - name: Install Dependencies
+        run: yarn install
+
+      - name: Build Application
+        run: yarn build
+
       - name: Install Heroku CLI
         run: |
           curl https://cli-assets.heroku.com/install.sh | sh
@@ -61,7 +70,11 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          heroku container:push web --app ${{ secrets.HEROKU_APP_NAME }}
+          docker build -t registry.heroku.com/${{ secrets.HEROKU_APP_NAME }}/web .
+          docker push registry.heroku.com/${{ secrets.HEROKU_APP_NAME }}/web
+
+      - name: Release to Heroku
+        run: |
           heroku container:release web --app ${{ secrets.HEROKU_APP_NAME }}
 
       - name: Verify Deployment
