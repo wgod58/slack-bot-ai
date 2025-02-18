@@ -34,10 +34,8 @@ A sophisticated Slack bot that leverages OpenAI's GPT-4, Redis Stack, and Pineco
 
 ### Cloud Infrastructure
 
-- Google Cloud Platform (GCP)
-  - Cloud Build (CI/CD)
-  - Cloud Run (Serverless deployment)
-  - Artifact Registry (Container registry)
+- GitHub Actions (CI/CD)
+- Heroku Container Registry
 - Redis Enterprise Cloud
 - Pinecone Cloud
 
@@ -51,16 +49,16 @@ The system implements a dual-layer RAG architecture:
 
 ## CI/CD Pipeline
 
-The project uses GCP Cloud Build for continuous integration and deployment:
+The project uses GitHub Actions and Heroku for continuous integration and deployment:
 
 1. **Build Stage**:
-
+   - Runs linting
    - Runs tests
    - Builds Docker image
-   - Pushes to Artifact Registry
+   - Pushes to Heroku Container Registry
 
 2. **Deploy Stage**:
-   - Deploys to Cloud Run
+   - Deploys to Heroku
    - Configures environment variables
    - Sets up service networking
 
@@ -68,10 +66,11 @@ The project uses GCP Cloud Build for continuous integration and deployment:
 
 ```mermaid
 graph LR
-    A[Git Push] --> B[Cloud Build]
-    B --> C[Build Container]
-    C --> D[Push to Registry]
-    D --> E[Deploy to Cloud Run]
+    A[Git Push] --> B[GitHub Actions]
+    B --> C[Run Tests]
+    C --> D[Build Container]
+    D --> E[Push to Registry]
+    E --> F[Deploy to Heroku]
 ```
 
 ## Performance Optimizations
@@ -80,25 +79,29 @@ graph LR
 - Efficient caching strategy for frequently asked questions
 - Asynchronous response storage in both Redis and Pinecone
 - Optimized vector search with cosine similarity
-- Serverless scaling with Cloud Run
-- Global distribution with Cloud Run locations
+- Automatic scaling with Heroku
+- Container-based deployment
 
 ## Setup & Installation
 
 1. Clone the repository:
 
 ```
+git clone https://github.com/wgod58/slack-bot.git
+cd slack-bot
+```
 
-## Deployment
+2. Install dependencies:
 
-### Environment Variables
+```
+yarn install
+```
 
-Required environment variables:
+3. Create a `.env` file and set the following environment variables:
+
 ```
 
 SLACK_BOT_TOKEN=
-SLACK_SIGNING_SECRET=
-SLACK_APP_TOKEN=
 OPENAI_API_KEY=
 PINECONE_API_KEY=
 PINECONE_INDEX_NAME=
@@ -107,31 +110,10 @@ REDIS_USERNAME=
 REDIS_PASSWORD=
 REDIS_PORT=
 PORT=8080
+```
 
-````
+4. Start the server:
 
-### CI/CD Pipeline
-
-The project uses GitHub Actions for CI/CD:
-
-1. **CI Stage**:
-   - Runs linting
-   - Runs tests
-   - Builds application
-
-2. **CD Stage**:
-   - Builds Docker image
-   - Deploys to Heroku
-
-### Manual Deployment
-
-```bash
-# Login to Heroku
-heroku login
-
-# Push to Heroku
-git push heroku main
-
-# View logs
-heroku logs --tail
-````
+```
+yarn start
+```
