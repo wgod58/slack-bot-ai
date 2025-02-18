@@ -4,12 +4,12 @@ A sophisticated Slack bot that leverages OpenAI's GPT-4, Redis Stack, and Pineco
 
 ## Key Features
 
-- 🤖 Intelligent question answering using GPT-4
-- 💾 Efficient caching with Redis Stack for fast responses
-- 🔍 Vector similarity search using Redis and Pinecone
-- 📝 Thread summarization capabilities
-- 🔄 RAG system for improved response accuracy
-- ⚡ Performance optimization with dual-layer caching
+- Intelligent question answering using GPT-4
+- Efficient caching with Redis Stack for fast responses
+- Vector similarity search using Redis and Pinecone
+- Thread summarization capabilities
+- RAG system for improved response accuracy
+- Performance optimization with dual-layer caching
 
 ## Technology Stack
 
