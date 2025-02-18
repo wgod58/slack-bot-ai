@@ -61,6 +61,7 @@ export const SLACK_CONFIG = {
 
 export const PINECONE_CONFIG = {
   API_KEY: process.env.PINECONE_API_KEY,
+  INDEX_NAME: process.env.PINECONE_INDEX_NAME,
 };
 
 export const SERVER_CONFIG = {

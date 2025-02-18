@@ -2,8 +2,6 @@ import { Pinecone } from '@pinecone-database/pinecone';
 
 import { PINECONE_CONFIG } from '../constants/config.js';
 
-const INDEX_NAME = 'slack-bot';
-
 const pinecone = new Pinecone({
   apiKey: PINECONE_CONFIG.API_KEY,
 });
@@ -11,7 +9,7 @@ const pinecone = new Pinecone({
 // Store question and response in Pinecone
 async function storeQuestionVectorInPinecone(question, response, questionEmbedding) {
   try {
-    const index = pinecone.Index(INDEX_NAME);
+    const index = pinecone.Index(PINECONE_CONFIG.INDEX_NAME);
 
     // Store in Pinecone
     await index.upsert([
@@ -37,7 +35,7 @@ async function storeQuestionVectorInPinecone(question, response, questionEmbeddi
 // Find similar questions
 async function findSimilarQuestionsInPinecone(questionEmbedding, limit = 5) {
   try {
-    const index = pinecone.Index(INDEX_NAME);
+    const index = pinecone.Index(PINECONE_CONFIG.INDEX_NAME);
 
     const queryResponse = await index.query({
       vector: questionEmbedding,
