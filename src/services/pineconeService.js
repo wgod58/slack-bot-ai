@@ -3,13 +3,11 @@ import { Pinecone } from '@pinecone-database/pinecone';
 import { PINECONE_CONFIG } from '../constants/config.js';
 
 const INDEX_NAME = 'slack-bot';
-const CONTROLLER_HOST = 'https://api.pinecone.io';
 
 console.log('PINECONE_CONFIG.API_KEY', PINECONE_CONFIG.API_KEY);
 
 const pinecone = new Pinecone({
   apiKey: PINECONE_CONFIG.API_KEY,
-  controllerHostUrl: CONTROLLER_HOST,
 });
 
 // Store question and response in Pinecone
