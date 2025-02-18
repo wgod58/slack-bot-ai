@@ -3,9 +3,9 @@ import 'dotenv/config';
 import express from 'express';
 
 import router from './routes/router.js';
+import { pinecone } from './services/pineconeService.js';
 import { createRedisVectorIndex } from './services/redisService.js';
 import { initialSlackBot, setupSlackListeners } from './services/slackService.js';
-import { pinecone } from './services/pineconeService.js';
 
 class App {
   constructor() {

@@ -54,6 +54,7 @@ The system implements a dual-layer RAG architecture:
 The project uses GCP Cloud Build for continuous integration and deployment:
 
 1. **Build Stage**:
+
    - Runs tests
    - Builds Docker image
    - Pushes to Artifact Registry
@@ -107,7 +108,7 @@ REDIS_PASSWORD=
 REDIS_PORT=
 PORT=8080
 
-```
+````
 
 ### CI/CD Pipeline
 
@@ -133,4 +134,4 @@ git push heroku main
 
 # View logs
 heroku logs --tail
-```
+````
