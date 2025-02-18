@@ -4,7 +4,7 @@ import { REDIS_CONFIG } from '../constants/config.js';
 
 const redisClient = new Redis({
   host: REDIS_CONFIG.HOST,
-  port: parseInt(REDIS_CONFIG.PORT),
+  port: REDIS_CONFIG.PORT,
   username: REDIS_CONFIG.USERNAME,
   password: REDIS_CONFIG.PASSWORD,
   maxRetriesPerRequest: 3,
@@ -141,6 +141,26 @@ function parseSearchResults(results) {
   }
 
   return documents;
+}
+
+export async function getEmbeddingFromCache(text) {
+  try {
+    const key = `${REDIS_CONFIG.PREFIXES.EMBEDDING}${text}`;
+    const cachedEmbedding = await redisClient.get(key);
+    return cachedEmbedding ? JSON.parse(cachedEmbedding) : null;
+  } catch (error) {
+    console.log('Error getting embedding from cache:', error);
+    return null;
+  }
+}
+
+export async function storeEmbeddingInCache(text, embedding) {
+  try {
+    const key = `${REDIS_CONFIG.PREFIXES.EMBEDDING}${text}`;
+    await redisClient.set(key, JSON.stringify(embedding));
+  } catch (error) {
+    console.log('Error storing embedding in cache:', error);
+  }
 }
 
 async function checkHealth() {

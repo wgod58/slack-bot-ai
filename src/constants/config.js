@@ -73,4 +73,7 @@ export const REDIS_CONFIG = {
   USERNAME: process.env.REDIS_USERNAME,
   PASSWORD: process.env.REDIS_PASSWORD,
   PORT: process.env.REDIS_PORT,
+  PREFIXES: {
+    EMBEDDING: 'embedding:',
+  },
 };

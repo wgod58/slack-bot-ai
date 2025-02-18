@@ -7,6 +7,7 @@ import {
   generateSummary,
   openai,
 } from '../../src/services/openaiService.js';
+import { getEmbeddingFromCache, storeEmbeddingInCache } from '../../src/services/redisService.js';
 
 // Mock OpenAI class
 jest.mock('openai', () => {
@@ -14,7 +15,7 @@ jest.mock('openai', () => {
   const mockEmbedCreate = jest.fn();
 
   return {
-    OpenAI: jest.fn(() => ({
+    OpenAI: jest.fn().mockImplementation(() => ({
       chat: {
         completions: {
           create: mockCreate,
@@ -26,6 +27,12 @@ jest.mock('openai', () => {
     })),
   };
 });
+
+// Mock Redis service
+jest.mock('../../src/services/redisService.js', () => ({
+  getEmbeddingFromCache: jest.fn(),
+  storeEmbeddingInCache: jest.fn(),
+}));
 
 describe('OpenAI Service', () => {
   const mockOpenAI = openai;
@@ -133,6 +140,38 @@ describe('OpenAI Service', () => {
       mockOpenAI.embeddings.create.mockRejectedValue(mockError);
 
       await expect(createEmbedding(text)).rejects.toThrow('API Error');
+    });
+  });
+
+  describe('Embedding Caching', () => {
+    test('should use cached embedding when available', async () => {
+      const text = 'test text';
+      const cachedEmbedding = [0.1, 0.2, 0.3];
+
+      getEmbeddingFromCache.mockResolvedValueOnce(cachedEmbedding);
+
+      const result = await createEmbedding(text);
+
+      expect(result).toEqual(cachedEmbedding);
+      expect(getEmbeddingFromCache).toHaveBeenCalledWith(text);
+      expect(openai.embeddings.create).not.toHaveBeenCalled();
+    });
+
+    test('should generate and cache new embedding when not in cache', async () => {
+      const text = 'test text';
+      const newEmbedding = [0.4, 0.5, 0.6];
+
+      getEmbeddingFromCache.mockResolvedValueOnce(null);
+      openai.embeddings.create.mockResolvedValueOnce({
+        data: [{ embedding: newEmbedding }],
+      });
+
+      const result = await createEmbedding(text);
+
+      expect(result).toEqual(newEmbedding);
+      expect(getEmbeddingFromCache).toHaveBeenCalledWith(text);
+      expect(storeEmbeddingInCache).toHaveBeenCalledWith(text, newEmbedding);
+      expect(openai.embeddings.create).toHaveBeenCalled();
     });
   });
 

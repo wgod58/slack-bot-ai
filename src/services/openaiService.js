@@ -1,21 +1,25 @@
 import { OpenAI } from 'openai';
 
 import { AI_CONFIG } from '../constants/config.js';
+import { getEmbeddingFromCache, storeEmbeddingInCache } from './redisService.js';
 
 const openai = new OpenAI({
   apiKey: AI_CONFIG.OPENAI_API_KEY,
 });
 
-async function generateSummary(messages) {
-  const prompt = `Please summarize this conversation:\n${messages}`;
-
+export async function generateSummary(messages) {
   try {
-    const completion = await openai.chat.completions.create({
+    const response = await openai.chat.completions.create({
       model: AI_CONFIG.MODELS.CHAT,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [
+        {
+          role: 'user',
+          content: `Please summarize this conversation:\n${messages}`,
+        },
+      ],
     });
 
-    return completion.choices[0].message.content;
+    return response.choices[0].message.content;
   } catch (error) {
     console.log('OpenAI Error:', {
       message: error.message,
@@ -26,9 +30,9 @@ async function generateSummary(messages) {
   }
 }
 
-async function generateResponse(question) {
+export async function generateResponse(question) {
   try {
-    const completion = await openai.chat.completions.create({
+    const response = await openai.chat.completions.create({
       model: AI_CONFIG.MODELS.CHAT,
       messages: [
         {
@@ -42,7 +46,7 @@ async function generateResponse(question) {
       ],
     });
 
-    return completion.choices[0].message.content;
+    return response.choices[0].message.content;
   } catch (error) {
     console.log('OpenAI Error:', {
       message: error.message,
@@ -53,16 +57,29 @@ async function generateResponse(question) {
   }
 }
 
-async function createEmbedding(text) {
+export async function createEmbedding(text) {
   try {
+    // Check cache first
+    const cachedEmbedding = await getEmbeddingFromCache(text);
+    if (cachedEmbedding) {
+      console.log('Using cached embedding');
+      return cachedEmbedding;
+    }
+
+    console.log('Generating new embedding');
     const response = await openai.embeddings.create({
       model: AI_CONFIG.MODELS.EMBEDDING,
       input: text,
     });
 
-    return response.data[0].embedding;
+    const embedding = response.data[0].embedding;
+
+    // Store in cache for future use
+    await storeEmbeddingInCache(text, embedding);
+
+    return embedding;
   } catch (error) {
-    console.log('Error creating embedding:', {
+    console.log('OpenAI Error:', {
       message: error.message,
       status: error.status,
       type: error.type,
@@ -71,4 +88,4 @@ async function createEmbedding(text) {
   }
 }
 
-export { createEmbedding, generateResponse, generateSummary, openai };
+export { openai };

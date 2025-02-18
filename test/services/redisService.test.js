@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, jest, test } from '@jest/globals';
 
+import { REDIS_CONFIG } from '../../src/constants/config.js';
 import {
   checkHealth,
   createRedisVectorIndex,
   findSimilarQuestionsInRedis,
+  getEmbeddingFromCache,
   redisClient,
+  storeEmbeddingInCache,
   storeQuestionVectorInRedis,
 } from '../../src/services/redisService.js';
 
@@ -25,6 +28,7 @@ describe('Redis Service', () => {
     redisClient.ping = jest.fn();
     redisClient.keys = jest.fn();
     redisClient.get = jest.fn();
+    redisClient.set = jest.fn();
   });
 
   describe('createRedisVectorIndex', () => {
@@ -226,6 +230,93 @@ describe('Redis Service', () => {
       expect(consoleSpy).toHaveBeenCalledWith(
         'Unexpected field structure for document:',
         'question:1',
+      );
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('Embedding Cache', () => {
+    test('should store embedding in cache', async () => {
+      const text = 'test question';
+      const embedding = [0.1, 0.2, 0.3];
+
+      redisClient.set.mockResolvedValueOnce('OK');
+
+      await storeEmbeddingInCache(text, embedding);
+
+      expect(redisClient.set).toHaveBeenCalledWith(
+        `${REDIS_CONFIG.PREFIXES.EMBEDDING}test question`,
+        JSON.stringify(embedding),
+      );
+    });
+
+    test('should handle storage errors gracefully', async () => {
+      const text = 'test question';
+      const embedding = [0.1, 0.2, 0.3];
+      const mockError = new Error('Redis error');
+
+      redisClient.set.mockRejectedValueOnce(mockError);
+      const consoleSpy = jest.spyOn(console, 'log');
+
+      await storeEmbeddingInCache(text, embedding);
+
+      expect(consoleSpy).toHaveBeenCalledWith('Error storing embedding in cache:', mockError);
+      consoleSpy.mockRestore();
+    });
+
+    test('should retrieve cached embedding', async () => {
+      const text = 'test question';
+      const embedding = [0.1, 0.2, 0.3];
+
+      redisClient.get.mockResolvedValueOnce(JSON.stringify(embedding));
+
+      const result = await getEmbeddingFromCache(text);
+
+      expect(result).toEqual(embedding);
+      expect(redisClient.get).toHaveBeenCalledWith(
+        `${REDIS_CONFIG.PREFIXES.EMBEDDING}test question`,
+      );
+    });
+
+    test('should return null for non-existent cache entry', async () => {
+      const text = 'test question';
+
+      redisClient.get.mockResolvedValueOnce(null);
+
+      const result = await getEmbeddingFromCache(text);
+
+      expect(result).toBeNull();
+      expect(redisClient.get).toHaveBeenCalledWith(
+        `${REDIS_CONFIG.PREFIXES.EMBEDDING}test question`,
+      );
+    });
+
+    test('should handle retrieval errors gracefully', async () => {
+      const text = 'test question';
+      const mockError = new Error('Redis error');
+
+      redisClient.get.mockRejectedValueOnce(mockError);
+      const consoleSpy = jest.spyOn(console, 'log');
+
+      const result = await getEmbeddingFromCache(text);
+
+      expect(result).toBeNull();
+      expect(consoleSpy).toHaveBeenCalledWith('Error getting embedding from cache:', mockError);
+      consoleSpy.mockRestore();
+    });
+
+    test('should handle invalid JSON in cache', async () => {
+      const text = 'test question';
+
+      redisClient.get.mockResolvedValueOnce('invalid json');
+      const consoleSpy = jest.spyOn(console, 'log');
+
+      const result = await getEmbeddingFromCache(text);
+
+      expect(result).toBeNull();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Error getting embedding from cache:',
+        expect.any(Error),
       );
       consoleSpy.mockRestore();
     });
