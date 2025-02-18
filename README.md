@@ -5,11 +5,11 @@ A sophisticated Slack bot that leverages OpenAI's GPT-4, Redis Stack, and Pineco
 ## Key Features
 
 - Intelligent question answering using GPT-4
-- Efficient caching with Redis Stack for fast responses
-- Vector similarity search using Redis and Pinecone
+- Efficient caching with Redis Stack for embedding messages and OpenAI response cache
+- Vector similarity search in Redis and Pinecone
 - Thread summarization capabilities
 - RAG system for improved response accuracy
-- Performance optimization with dual-layer caching
+- Performance optimization with dual-layer caching (eviction policy LFU in Redis cloud setup)
 
 ## Technology Stack
 
@@ -19,9 +19,6 @@ A sophisticated Slack bot that leverages OpenAI's GPT-4, Redis Stack, and Pineco
 - Express
 - Slack Bolt Framework
 - OpenAI API (GPT-4 & Embeddings)
-
-### Vector Stores & Caching
-
 - Redis Stack (Vector similarity search + Caching)
 - Pinecone (Vector database)
 
@@ -97,13 +94,12 @@ graph TD
 
 2. **Vector Search System**
    - **Redis Layer**: Fast, in-memory vector similarity search
-     - Stores recent Q&A pairs
+     - Caching of embedding messages
+     - Caching of OpenAI response
      - Handles high-frequency queries
-     - Uses consistent hashing for distribution
    - **Pinecone Layer**: Persistent vector storage
      - Maintains historical knowledge base
      - Handles complex similarity searches
-     - Distributed across shards using consistent hashing
 
 3. **OpenAI Integration**
    - GPT-4 for response generation
@@ -118,7 +114,13 @@ graph TD
    sequenceDiagram
        User->>Slack: Asks Question
        Slack->>Bot: Message Event
-       Bot->>OpenAI: Generate Embedding
+       Bot->>Redis: Search Similar
+       alt Found in Redis
+           Redis-->>Bot: Return Cached Embedding
+       else Not Found
+           Bot->>OpenAI: Generate Embedding
+           Bot->>Redis: Cache Embedding
+       end
        Bot->>Redis: Search Similar
        alt Found in Redis
            Redis-->>Bot: Return Cached Response
@@ -154,7 +156,7 @@ graph TD
 
 ## Performance Optimizations
 
-- Redis Stack implementation for vector similarity search
+- Redis Stack implementation for vector similarity search and caching embedding messages
 - Efficient caching strategy for frequently asked questions
 - Asynchronous response storage in both Redis and Pinecone
 - Optimized vector search with cosine similarity
@@ -171,17 +173,15 @@ graph TD
    - Pinecone query throughput limits
 
 2. **Data Distribution**
-   - Hot spots in data access
-   - Uneven load distribution
-   - Cross-node query coordination
+   - Hot spots in data access for Redis and Pinecone
 
 3. **Latency Issues**
    - Network latency with external APIs
-   - Vector search computation time
-   - Sequential processing of embeddings
+   - OpenAI response latency
 
 4. **Resource Constraints**
    - Redis memory limitations
+   - Pinecone query throughput limits
    - Container resource limits
    - Concurrent request handling
 
@@ -195,22 +195,21 @@ graph TD
        B --> C[Caching]
        B --> D[Processing]
        B --> E[Architecture]
-       C --> F[Enhanced Redis Caching]
-       C --> G[Consistent Hashing]
+       B --> H[Add nosql database for embedding messages]
+       C --> F[Consistent Hashing Enhanced Redis Caching]
+       C --> G[Consistent Hashing Enhanced Pinecone Caching]
        C --> G[Response Precomputation]
-       D --> I[Parallel Embeddings]
+       D --> I[Precompute Embeddings and Responses]
        E --> J[Message Queue]
        E --> K[Load Balancer]
    ```
 
 2. **Feature Enhancements**
-   - Implement message queue system (RabbitMQ/Redis)
+   - Implement message queue system (RabbitMQ/Kafka)
    - Add consistent hashing for distributed caching
    - Introduce response precomputation
-   - Implement adaptive caching strategies (LFU or LRU)
 
 3. **Scalability Improvements**
-   - Horizontal scaling of worker nodes
    - Distributed vector search on Redis and Pinecone
    - Consistent hashing for data distribution
    - Regional data replication
@@ -220,11 +219,10 @@ graph TD
    - Enhanced error tracking
    - Performance metrics dashboard
    - Automated failover systems
-   - A/B testing infrastructure
 
-### Distributed System Architecture
+### Distributed System Implementation
 
-1. **Consistent Hashing Implementation**
+1. **Consistent Hashing**
 
    ```mermaid
    graph TD
@@ -249,22 +247,6 @@ graph TD
    - Automatic scaling
    - Minimal data movement
    - High availability
-
-### Implementation Priority
-
-1. **Short-term**
-   - Advanced caching strategies (LFU or LRU)
-   - Message queue implementation
-   - Enhanced error handling
-   - Improved monitoring
-
-2. **Mid-term**
-   - Response precomputation
-   - Regional replication
-
-3. **Long-term**
-   - Distributed vector search on Redis and Pinecone
-   - Full observability system
 
 ## Setup & Installation
 
