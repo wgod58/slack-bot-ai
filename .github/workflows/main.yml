@@ -46,6 +46,8 @@ jobs:
     needs: test
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
+    env:
+      HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -55,7 +57,7 @@ jobs:
           curl https://cli-assets.heroku.com/install.sh | sh
 
       - name: Login to Heroku Container Registry
-        run: heroku container:login
+        run: echo "${{ secrets.HEROKU_API_KEY }}" | docker login --username=_ --password-stdin registry.heroku.com
 
       - name: Build and Push Docker Image
         run: |
