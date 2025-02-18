@@ -73,6 +73,190 @@ graph LR
     E --> F[Deploy to Heroku]
 ```
 
+## System Design
+
+### High-Level Architecture
+
+```mermaid
+graph TD
+    A[Slack App] --> B[Express Server]
+    B --> C[Message Handler]
+    C --> D[OpenAI Service]
+    C --> E[Vector Search]
+    E --> F[Redis Cache]
+    E --> G[Pinecone DB]
+    D --> H[Response Generator]
+```
+
+### Components
+
+1. **Slack Integration**
+   - Handles real-time message events
+   - Manages thread interactions
+   - Processes commands and mentions
+
+2. **Vector Search System**
+   - **Redis Layer**: Fast, in-memory vector similarity search
+     - Stores recent Q&A pairs
+     - Handles high-frequency queries
+     - Uses consistent hashing for distribution
+   - **Pinecone Layer**: Persistent vector storage
+     - Maintains historical knowledge base
+     - Handles complex similarity searches
+     - Distributed across shards using consistent hashing
+
+3. **OpenAI Integration**
+   - GPT-4 for response generation
+   - Text embeddings for vector search
+   - Context-aware response formatting
+
+### Distributed System Architecture
+
+1. **Consistent Hashing Implementation**
+
+   ```mermaid
+   graph TD
+       A[Question Input] --> B[Hash Function]
+       B --> C[Hash Ring]
+       C --> D{Node Selection}
+       D --> E[Redis Node 1]
+       D --> F[Redis Node 2]
+       D --> G[Redis Node N]
+       D --> H[Pinecone Shard 1]
+       D --> I[Pinecone Shard 2]
+       D --> J[Pinecone Shard N]
+   ```
+
+2. **Key Distribution Strategy**
+   - Virtual nodes for better distribution
+   - Minimal redistribution on node changes
+   - Configurable replication factor
+
+3. **Benefits**
+   - Even data distribution
+   - Automatic scaling
+   - Minimal data movement
+   - High availability
+
+### Data Flow
+
+1. **Question Processing**
+
+   ```mermaid
+   sequenceDiagram
+       User->>Slack: Asks Question
+       Slack->>Bot: Message Event
+       Bot->>OpenAI: Generate Embedding
+       Bot->>Redis: Search Similar
+       alt Found in Redis
+           Redis-->>Bot: Return Cached Response
+       else Not Found
+           Bot->>Pinecone: Search Similar
+           alt Found in Pinecone
+               Pinecone-->>Bot: Return Similar Q&A
+           else Not Found
+               Bot->>OpenAI: Generate New Response
+               Bot->>Redis: Cache Response
+               Bot->>Pinecone: Store Response
+           end
+       end
+       Bot->>Slack: Send Response
+       Slack->>User: Display Response
+   ```
+
+### Performance Considerations
+
+- **Caching Strategy**
+  - Redis for hot data (recent/frequent queries)
+  - Pinecone for cold data (historical knowledge)
+
+- **Scalability**
+  - Containerized deployment
+  - Automatic horizontal scaling
+  - Load balancing across instances
+
+- **Reliability**
+  - Fallback mechanisms
+  - Error handling and retry logic
+  - Monitoring and logging
+
+## System Bottlenecks & Future Improvements
+
+### Current Bottlenecks
+
+1. **API Rate Limits**
+   - OpenAI API request limits
+   - Slack API message limits
+   - Pinecone query throughput limits
+
+2. **Data Distribution**
+   - Hot spots in data access
+   - Uneven load distribution
+   - Cross-node query coordination
+
+3. **Latency Issues**
+   - Network latency with external APIs
+   - Vector search computation time
+   - Sequential processing of embeddings
+
+4. **Resource Constraints**
+   - Redis memory limitations
+   - Container resource limits
+   - Concurrent request handling
+
+### Planned Improvements
+
+1. **Performance Optimization**
+
+   ```mermaid
+   graph TD
+       A[Current System] --> B[Improvements]
+       B --> C[Caching]
+       B --> D[Processing]
+       B --> E[Architecture]
+       C --> F[Enhanced Redis Caching]
+       C --> G[Consistent Hashing]
+       C --> G[Response Precomputation]
+       D --> I[Parallel Embeddings]
+       E --> J[Message Queue]
+       E --> K[Load Balancer]
+   ```
+
+2. **Feature Enhancements**
+   - Implement message queue system (RabbitMQ/Redis)
+   - Add consistent hashing for distributed caching
+   - Introduce response precomputation
+   - Implement adaptive caching strategies (LFU or LRU)
+
+3. **Scalability Improvements**
+   - Horizontal scaling of worker nodes
+   - Distributed vector search on Redis and Pinecone
+   - Consistent hashing for data distribution
+   - Regional data replication
+   - Load balancing improvements
+
+4. **Monitoring & Reliability**
+   - Enhanced error tracking
+   - Performance metrics dashboard
+   - Automated failover systems
+   - A/B testing infrastructure
+
+### Implementation Priority
+
+1. **Short-term**
+   - Message queue implementation
+   - Enhanced error handling
+   - Improved monitoring
+
+2. **Mid-term**
+   - Response precomputation
+   - Regional replication
+
+3. **Long-term**
+   - Distributed vector search on Redis and Pinecone
+   - Advanced caching strategies (LFU or LRU)
+   - Full observability system
+
 ## Performance Optimizations
 
 - Redis Stack implementation for vector similarity search
@@ -100,7 +284,6 @@ yarn install
 3. Create a `.env` file and set the following environment variables:
 
 ```
-
 SLACK_BOT_TOKEN=
 OPENAI_API_KEY=
 PINECONE_API_KEY=
