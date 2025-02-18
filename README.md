@@ -68,10 +68,9 @@ The project uses GCP Cloud Build for continuous integration and deployment:
 ```mermaid
 graph LR
     A[Git Push] --> B[Cloud Build]
-    B --> C[Run Tests]
-    C --> D[Build Container]
-    D --> E[Push to Registry]
-    E --> F[Deploy to Cloud Run]
+    B --> C[Build Container]
+    C --> D[Push to Registry]
+    D --> E[Deploy to Cloud Run]
 ```
 
 ## Performance Optimizations
