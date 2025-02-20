@@ -19,7 +19,7 @@ A sophisticated Slack bot that leverages OpenAI's GPT-4, Redis Stack, and Pineco
 - Express
 - Slack Bolt Framework
 - OpenAI API (GPT-4 & Embeddings)
-- Redis Stack (Vector similarity search + Caching)
+- Redis Stack (Cache embedding messages and OpenAI response)
 - Pinecone (Vector database)
 
 ### Development Tools
@@ -93,7 +93,7 @@ graph TD
    - Processes commands and mentions
 
 2. **Vector Search System**
-   - **Redis Layer**: Fast, in-memory vector similarity search
+   - **Redis Layer**: Fast, search in cache
      - Caching of embedding messages
      - Caching of OpenAI response
      - Handles high-frequency queries
@@ -114,14 +114,14 @@ graph TD
    sequenceDiagram
        User->>Slack: Asks Question
        Slack->>Bot: Message Event
-       Bot->>Redis: Search Similar
+       Bot->>Redis: Search embedding messages vector value
        alt Found in Redis
            Redis-->>Bot: Return Cached Embedding
        else Not Found
            Bot->>OpenAI: Generate Embedding
            Bot->>Redis: Cache Embedding
        end
-       Bot->>Redis: Search Similar
+       Bot->>Redis: Search similar vector value
        alt Found in Redis
            Redis-->>Bot: Return Cached Response
        else Not Found
