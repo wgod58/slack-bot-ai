@@ -1,6 +1,7 @@
 import { OpenAI } from 'openai';
 
 import { AI_CONFIG } from '../constants/config.js';
+import { getEmbeddingFromDB, storeEmbeddingInDB } from './mongoService.js';
 import { getEmbeddingFromCache, storeEmbeddingInCache } from './redisService.js';
 
 const openai = new OpenAI({
@@ -59,11 +60,20 @@ export async function generateResponse(question) {
 
 export async function createEmbedding(text) {
   try {
-    // Check cache first
+    // Check Redis cache first
     const cachedEmbedding = await getEmbeddingFromCache(text);
     if (cachedEmbedding) {
       console.log('Using cached embedding');
       return cachedEmbedding;
+    }
+
+    // Check MongoDB if not in cache
+    const dbEmbedding = await getEmbeddingFromDB(text);
+    if (dbEmbedding) {
+      console.log('Using DB embedding');
+      // Store in cache for future use
+      storeEmbeddingInCache(text, dbEmbedding);
+      return dbEmbedding;
     }
 
     console.log('Generating new embedding');
@@ -74,8 +84,9 @@ export async function createEmbedding(text) {
 
     const embedding = response.data[0].embedding;
 
-    // Store in cache for future use
-    await storeEmbeddingInCache(text, embedding);
+    // Store in both cache and DB
+    storeEmbeddingInCache(text, embedding);
+    storeEmbeddingInDB(text, embedding);
 
     return embedding;
   } catch (error) {
