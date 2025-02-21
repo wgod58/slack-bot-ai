@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import { AI_CONFIG } from '../../src/constants/config.js';
+import { AI_CONFIG, RESPONSES } from '../../src/constants/config.js';
 import {
   createEmbedding,
   generateResponse,
   generateSummary,
   openai,
 } from '../../src/services/openaiService.js';
+import { getEmbeddingFromDB } from '../../src/services/mongoService.js';
 import { getEmbeddingFromCache, storeEmbeddingInCache } from '../../src/services/redisService.js';
 
 // Mock OpenAI class
@@ -32,6 +33,12 @@ jest.mock('openai', () => {
 jest.mock('../../src/services/redisService.js', () => ({
   getEmbeddingFromCache: jest.fn(),
   storeEmbeddingInCache: jest.fn(),
+}));
+
+// Mock MongoDB service
+jest.mock('../../src/services/mongoService.js', () => ({
+  getEmbeddingFromDB: jest.fn(),
+  storeEmbeddingInDB: jest.fn(),
 }));
 
 describe('OpenAI Service', () => {
@@ -82,37 +89,36 @@ describe('OpenAI Service', () => {
 
   describe('generateResponse', () => {
     test('should generate response successfully', async () => {
-      const question = 'What is Node.js?';
-      const mockResponse = 'Node.js is a JavaScript runtime';
+      const mockResponse = {
+        choices: [{ message: { content: 'mocked response' } }],
+      };
 
-      mockOpenAI.chat.completions.create.mockResolvedValue({
-        choices: [{ message: { content: mockResponse } }],
-      });
+      mockOpenAI.chat.completions.create.mockResolvedValueOnce(mockResponse);
 
-      const response = await generateResponse(question);
+      const response = await generateResponse('test question');
 
-      expect(response).toBe(mockResponse);
+      expect(response).toBe(mockResponse.choices[0].message.content);
       expect(mockOpenAI.chat.completions.create).toHaveBeenCalledWith({
-        model: AI_CONFIG.MODELS.CHAT,
+        model: AI_CONFIG.MODELS.GPT_4,
         messages: [
           {
             role: 'system',
-            content: AI_CONFIG.SYSTEM_PROMPTS.DEFAULT,
+            content: AI_CONFIG.SYSTEM_PROMPTS.GENERAL,
           },
           {
+            content: 'test question',
             role: 'user',
-            content: question,
           },
         ],
       });
     });
 
     test('should handle API errors in response generation', async () => {
-      const question = 'Test question';
       const mockError = new Error('API Error');
-      mockOpenAI.chat.completions.create.mockRejectedValue(mockError);
+      mockOpenAI.chat.completions.create.mockRejectedValueOnce(mockError);
 
-      await expect(generateResponse(question)).rejects.toThrow('API Error');
+      const result = await generateResponse('test question');
+      expect(result).toBe(RESPONSES.QUESTION_ERROR);
     });
   });
 
@@ -144,6 +150,23 @@ describe('OpenAI Service', () => {
   });
 
   describe('Embedding Caching', () => {
+    test('should handle DB embedding retrieval and caching', async () => {
+      const text = 'test text';
+      const dbEmbedding = [0.7, 0.8, 0.9];
+
+      // Mock cache miss but DB hit
+      getEmbeddingFromCache.mockResolvedValueOnce(null);
+      getEmbeddingFromDB.mockResolvedValueOnce(dbEmbedding);
+
+      const result = await createEmbedding(text);
+
+      expect(result).toEqual(dbEmbedding);
+      expect(getEmbeddingFromCache).toHaveBeenCalledWith(text);
+      expect(getEmbeddingFromDB).toHaveBeenCalledWith(text);
+      expect(storeEmbeddingInCache).toHaveBeenCalledWith(text, dbEmbedding);
+      expect(openai.embeddings.create).not.toHaveBeenCalled();
+    });
+
     test('should use cached embedding when available', async () => {
       const text = 'test text';
       const cachedEmbedding = [0.1, 0.2, 0.3];
@@ -177,23 +200,36 @@ describe('OpenAI Service', () => {
 
   describe('Error Handling', () => {
     test('should include error details in console.log', async () => {
-      const consoleSpy = jest.spyOn(console, 'log');
       const mockError = {
         message: 'API Error',
         status: 429,
         type: 'rate_limit_error',
-        name: 'OpenAIError',
       };
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
-      mockOpenAI.chat.completions.create.mockRejectedValue(mockError);
+      mockOpenAI.chat.completions.create.mockRejectedValueOnce(mockError);
 
-      await expect(generateResponse('test')).rejects.toEqual(mockError);
+      const result = await generateResponse('test question');
+
       expect(consoleSpy).toHaveBeenCalledWith('OpenAI Error:', {
         message: mockError.message,
         status: mockError.status,
         type: mockError.type,
       });
-      consoleSpy.mockRestore();
+      expect(result).toBe(RESPONSES.QUESTION_ERROR);
+    });
+
+    test('should handle missing response data', async () => {
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      mockOpenAI.chat.completions.create.mockResolvedValueOnce({
+        choices: [{}],
+      });
+
+      const result = await generateResponse('test question');
+
+      expect(consoleSpy).toHaveBeenCalledWith('OpenAI Error:', expect.any(Object));
+      expect(result).toBe(RESPONSES.QUESTION_ERROR);
     });
   });
 });

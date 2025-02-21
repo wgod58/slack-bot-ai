@@ -1,3 +1,4 @@
+# trunk-ignore-all(checkov/CKV2_GHA_1)
 name: CI/CD Pipeline
 
 on:
@@ -20,6 +21,11 @@ jobs:
       REDIS_USERNAME: ${{ secrets.REDIS_USERNAME }}
       REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
       REDIS_PORT: ${{ secrets.REDIS_PORT }}
+      ORMONGO_RS_URL: ${{ secrets.ORMONGO_RS_URL }}
+      MONGODB_DB_NAME: ${{ secrets.MONGODB_DB_NAME }}
+      MONGODB_USERNAME: ${{ secrets.MONGODB_USERNAME }}
+      MONGODB_PASSWORD: ${{ secrets.MONGODB_PASSWORD }}
+      MONGODB_OPTIONS: ${{ secrets.MONGODB_OPTIONS }}
       PORT: 8080
     steps:
       - uses: actions/checkout@v4
@@ -28,6 +34,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          # trunk-ignore(yamllint/quoted-strings)
           cache: 'yarn'
 
       - name: Get yarn cache directory path
@@ -67,6 +74,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          # trunk-ignore(yamllint/quoted-strings)
           cache: 'yarn'
 
       - name: Install Dependencies

@@ -3,21 +3,25 @@ import 'dotenv/config';
 import express from 'express';
 
 import router from './routes/router.js';
-import { pinecone } from './services/pineconeService.js';
+import { connectToMongoDB } from './services/mongoService.js';
 import { createRedisVectorIndex } from './services/redisService.js';
 import { initialSlackBot, setupSlackListeners } from './services/slackService.js';
 
-class App {
+export class App {
   constructor() {
     this.server = express();
     this.slackBot = null;
+    // Setup basic middleware
+    this.server.use(express.json());
   }
 
   async initialize() {
     try {
-      // Setup middleware
-      this.server.use(express.json());
       this.server.use('/api', router);
+
+      // Initialize MongoDB connection
+      await connectToMongoDB();
+      console.log('MongoDB connected successfully');
 
       // Initialize Redis vector index
       await createRedisVectorIndex();
@@ -27,9 +31,6 @@ class App {
       this.slackBot = initialSlackBot();
       await this.slackBot.start();
       console.log('Slack bot is running!');
-
-      const indexes = await pinecone.listIndexes();
-      console.log('Show pinecone Indexes:', indexes);
 
       // Setup Slack listeners
       console.log('Setting up Slack listeners...');

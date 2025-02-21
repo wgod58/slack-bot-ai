@@ -77,3 +77,11 @@ export const REDIS_CONFIG = {
     EMBEDDING: 'embedding:',
   },
 };
+
+export const MONGODB_CONFIG = {
+  URI: process.env.ORMONGO_RS_URL,
+  DB_NAME: process.env.MONGODB_DB_NAME,
+  USERNAME: process.env.MONGODB_USERNAME,
+  PASSWORD: process.env.MONGODB_PASSWORD,
+  OPTIONS: process.env.MONGODB_OPTIONS,
+};
