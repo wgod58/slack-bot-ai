@@ -7,7 +7,6 @@ let db;
 
 export async function connectToMongoDB() {
   try {
-    console.log('MONGODB_CONFIG', MONGODB_CONFIG);
     const USERNAME = MONGODB_CONFIG.USERNAME;
     const PASSWORD = MONGODB_CONFIG.PASSWORD;
     const HOSTS = MONGODB_CONFIG.URI;
