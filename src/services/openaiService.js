@@ -27,7 +27,7 @@ export async function generateSummary(messages) {
       status: error.status,
       type: error.type,
     });
-    throw error;
+    throw new Error(RESPONSES.QUESTION_ERROR);
   }
 }
 
@@ -38,7 +38,7 @@ export async function generateResponse(question) {
       messages: [
         {
           role: 'system',
-          content: AI_CONFIG.SYSTEM_PROMPTS.GENERAL,
+          content: AI_CONFIG.SYSTEM_PROMPTS.DEFAULT,
         },
         {
           role: 'user',
@@ -58,7 +58,7 @@ export async function generateResponse(question) {
       status: error.status,
       type: error.type,
     });
-    return RESPONSES.QUESTION_ERROR;
+    throw new Error(RESPONSES.QUESTION_ERROR);
   }
 }
 

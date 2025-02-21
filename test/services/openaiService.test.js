@@ -1,13 +1,13 @@
-import { beforeEach, describe, expect, jest, test } from '@jest/globals';
+import { beforeAll, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
 import { AI_CONFIG, RESPONSES } from '../../src/constants/config.js';
+import { getEmbeddingFromDB } from '../../src/services/mongoService.js';
 import {
   createEmbedding,
   generateResponse,
   generateSummary,
   openai,
 } from '../../src/services/openaiService.js';
-import { getEmbeddingFromDB } from '../../src/services/mongoService.js';
 import { getEmbeddingFromCache, storeEmbeddingInCache } from '../../src/services/redisService.js';
 
 // Mock OpenAI class
@@ -80,10 +80,9 @@ describe('OpenAI Service', () => {
       const messages = ['Test message'];
       const mockError = new Error('API Error');
 
-      // Properly reject the promise
       mockOpenAI.chat.completions.create.mockRejectedValue(mockError);
 
-      await expect(generateSummary(messages)).rejects.toThrow('API Error');
+      await expect(generateSummary(messages)).rejects.toThrow(RESPONSES.QUESTION_ERROR);
     });
   });
 
@@ -103,7 +102,7 @@ describe('OpenAI Service', () => {
         messages: [
           {
             role: 'system',
-            content: AI_CONFIG.SYSTEM_PROMPTS.GENERAL,
+            content: AI_CONFIG.SYSTEM_PROMPTS.DEFAULT,
           },
           {
             content: 'test question',
@@ -117,8 +116,7 @@ describe('OpenAI Service', () => {
       const mockError = new Error('API Error');
       mockOpenAI.chat.completions.create.mockRejectedValueOnce(mockError);
 
-      const result = await generateResponse('test question');
-      expect(result).toBe(RESPONSES.QUESTION_ERROR);
+      await expect(generateResponse('test question')).rejects.toThrow(RESPONSES.QUESTION_ERROR);
     });
   });
 
@@ -209,14 +207,13 @@ describe('OpenAI Service', () => {
 
       mockOpenAI.chat.completions.create.mockRejectedValueOnce(mockError);
 
-      const result = await generateResponse('test question');
+      await expect(generateResponse('test question')).rejects.toThrow(RESPONSES.QUESTION_ERROR);
 
       expect(consoleSpy).toHaveBeenCalledWith('OpenAI Error:', {
         message: mockError.message,
         status: mockError.status,
         type: mockError.type,
       });
-      expect(result).toBe(RESPONSES.QUESTION_ERROR);
     });
 
     test('should handle missing response data', async () => {
@@ -226,10 +223,9 @@ describe('OpenAI Service', () => {
         choices: [{}],
       });
 
-      const result = await generateResponse('test question');
+      await expect(generateResponse('test question')).rejects.toThrow(RESPONSES.QUESTION_ERROR);
 
       expect(consoleSpy).toHaveBeenCalledWith('OpenAI Error:', expect.any(Object));
-      expect(result).toBe(RESPONSES.QUESTION_ERROR);
     });
   });
 });
