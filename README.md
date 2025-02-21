@@ -129,6 +129,7 @@ graph TD
            Bot->>Pinecone: Search Similar
            alt Found in Pinecone
                Pinecone-->>Bot: Return Similar Q&A
+               Bot->>Slack: Send Response
                Pinecone->>Redis: Store Similar Q&A
            else Not Found
                Bot->>OpenAI: Generate New Response
