@@ -34,7 +34,7 @@ export async function generateSummary(messages) {
 export async function generateResponse(question) {
   try {
     const response = await openai.chat.completions.create({
-      model: AI_CONFIG.MODELS.GPT_4,
+      model: AI_CONFIG.MODELS.CHAT,
       messages: [
         {
           role: 'system',

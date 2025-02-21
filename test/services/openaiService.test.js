@@ -99,7 +99,7 @@ describe('OpenAI Service', () => {
 
       expect(response).toBe(mockResponse.choices[0].message.content);
       expect(mockOpenAI.chat.completions.create).toHaveBeenCalledWith({
-        model: AI_CONFIG.MODELS.GPT_4,
+        model: AI_CONFIG.MODELS.CHAT,
         messages: [
           {
             role: 'system',
