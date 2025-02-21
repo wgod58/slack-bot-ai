@@ -44,7 +44,7 @@ export async function getEmbeddingFromDB(text) {
 
 export async function storeEmbeddingInDB(text, embedding) {
   try {
-    console.log('Storing embedding in MongoDB:', text);
+    console.log('Storing embedding in MongoDB');
     await db.collection('embeddings').updateOne(
       { text },
       {

@@ -155,7 +155,7 @@ export async function getEmbeddingFromCache(text) {
 }
 
 export async function storeEmbeddingInCache(text, embedding) {
-  console.log('Storing embedding in cache:', text);
+  console.log('Storing embedding in cache');
   try {
     const key = `${REDIS_CONFIG.PREFIXES.EMBEDDING}${text}`;
     await redisClient.set(key, JSON.stringify(embedding));
