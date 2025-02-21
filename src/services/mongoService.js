@@ -65,6 +65,9 @@ export async function storeEmbeddingInDB(text, embedding) {
 export async function closeMongoConnection() {
   if (client) {
     await client.close();
+    client = null;
     console.log('MongoDB connection closed');
+  } else {
+    console.log('MongoDB connection already closed');
   }
 }

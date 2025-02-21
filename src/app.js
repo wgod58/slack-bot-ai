@@ -7,16 +7,16 @@ import { connectToMongoDB } from './services/mongoService.js';
 import { createRedisVectorIndex } from './services/redisService.js';
 import { initialSlackBot, setupSlackListeners } from './services/slackService.js';
 
-class App {
+export class App {
   constructor() {
     this.server = express();
     this.slackBot = null;
+    // Setup basic middleware
+    this.server.use(express.json());
   }
 
   async initialize() {
     try {
-      // Setup middleware
-      this.server.use(express.json());
       this.server.use('/api', router);
 
       // Initialize MongoDB connection

@@ -1,6 +1,6 @@
 import { OpenAI } from 'openai';
 
-import { AI_CONFIG } from '../constants/config.js';
+import { AI_CONFIG, RESPONSES } from '../constants/config.js';
 import { getEmbeddingFromDB, storeEmbeddingInDB } from './mongoService.js';
 import { getEmbeddingFromCache, storeEmbeddingInCache } from './redisService.js';
 
@@ -34,11 +34,11 @@ export async function generateSummary(messages) {
 export async function generateResponse(question) {
   try {
     const response = await openai.chat.completions.create({
-      model: AI_CONFIG.MODELS.CHAT,
+      model: AI_CONFIG.MODELS.GPT_4,
       messages: [
         {
           role: 'system',
-          content: AI_CONFIG.SYSTEM_PROMPTS.DEFAULT,
+          content: AI_CONFIG.SYSTEM_PROMPTS.GENERAL,
         },
         {
           role: 'user',
@@ -47,6 +47,10 @@ export async function generateResponse(question) {
       ],
     });
 
+    if (!response?.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response structure from OpenAI');
+    }
+
     return response.choices[0].message.content;
   } catch (error) {
     console.log('OpenAI Error:', {
@@ -54,7 +58,7 @@ export async function generateResponse(question) {
       status: error.status,
       type: error.type,
     });
-    throw error;
+    return RESPONSES.QUESTION_ERROR;
   }
 }
 
