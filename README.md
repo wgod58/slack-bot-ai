@@ -6,10 +6,10 @@ A sophisticated Slack bot that leverages OpenAI's GPT-4, Redis Stack, and Pineco
 
 - Intelligent question answering using GPT-4
 - Efficient caching with Redis Stack for embedding messages and OpenAI response cache
+- MongoDB for persistent storage of embedding messages
 - Vector similarity search in Redis and Pinecone
 - Thread summarization capabilities
-- RAG system for improved response accuracy
-- Performance optimization with dual-layer caching (eviction policy LFU in Redis cloud setup)
+- Performance optimization with dual-layer caching
 
 ## Technology Stack
 
@@ -21,6 +21,8 @@ A sophisticated Slack bot that leverages OpenAI's GPT-4, Redis Stack, and Pineco
 - OpenAI API (GPT-4 & Embeddings)
 - Redis Stack (Cache embedding messages and OpenAI response)
 - Pinecone (Vector database)
+- MongoDB (Store embedding messages)
+- Docker
 
 ### Development Tools
 
@@ -28,47 +30,32 @@ A sophisticated Slack bot that leverages OpenAI's GPT-4, Redis Stack, and Pineco
 - ESLint & Prettier
 - Jest (Testing)
 - Husky (Git hooks)
-
-### Cloud Infrastructure
-
 - GitHub Actions (CI/CD)
-- Heroku Container Registry
-- Redis Enterprise Cloud
-- Pinecone Cloud
+- Heroku (Deployment)
 
 ## Architecture
 
 The system implements a dual-layer RAG architecture:
 
-1. **First Layer**: Redis Stack for fast, in-memory vector similarity search
-2. **Second Layer**: Pinecone for persistent vector storage
-3. **Fallback**: OpenAI GPT-4 for generating new responses
+1. **First Layer**: Redis Stack. Caching embedding messages and caching OpenAI response
+2. **Second Layer**: MongoDB. Store embedding messages to prevent Redis eviction policy clean up
+3. **Third Layer**: Pinecone for similarity search and persistent vector storage
+4. **Fallback**: OpenAI GPT-4 for generating new responses
 
 ## CI/CD Pipeline
 
 The project uses GitHub Actions and Heroku for continuous integration and deployment:
 
-1. **Build Stage**:
+1. **Test Stage**:
    - Runs linting
    - Runs tests
-   - Builds Docker image
-   - Pushes to Heroku Container Registry
 
 2. **Deploy Stage**:
+   - Builds Docker image
+   - Pushes to Heroku Container Registry
    - Deploys to Heroku
    - Configures environment variables
    - Sets up service networking
-
-### Deployment Flow
-
-```mermaid
-graph LR
-    A[Git Push] --> B[GitHub Actions]
-    B --> C[Run Tests]
-    C --> D[Build Container]
-    D --> E[Push to Registry]
-    E --> F[Deploy to Heroku]
-```
 
 ## System Design
 
@@ -81,8 +68,9 @@ graph TD
     C --> D[OpenAI Service]
     C --> E[Vector Search]
     E --> F[Redis Cache]
-    E --> G[Pinecone DB]
-    D --> H[Response Generator]
+    E --> G[MongoDB]
+    E --> H[Pinecone DB]
+    D --> I[Response Generator]
 ```
 
 ### Components
@@ -106,6 +94,11 @@ graph TD
    - Text embeddings for vector search
    - Context-aware response formatting
 
+4. **Document Storage**
+    - MongoDB for persistent storage
+    - Stores embeddings and metadata
+    - Handles data relationships
+
 ### Data Flow
 
 1. **Question Processing**
@@ -118,72 +111,46 @@ graph TD
        alt Found in Redis
            Redis-->>Bot: Return Cached Embedding
        else Not Found
-           Bot->>OpenAI: Generate Embedding
-           Bot->>Redis: Cache Embedding
+           Bot->>MongoDB: Search embedding messages
+           alt Found in MongoDB
+               MongoDB-->>Bot: Return Embedding
+               MongoDB->>Redis: Store Embedding
+           else Not Found
+               Bot->>OpenAI: Generate Embedding
+               OpenAI->>MongoDB: Store Embedding
+               OpenAI->>Redis: Store Embedding
+           end
        end
        Bot->>Redis: Search similar vector value
        alt Found in Redis
            Redis-->>Bot: Return Cached Response
+           Bot->>Slack: Send Response
        else Not Found
            Bot->>Pinecone: Search Similar
            alt Found in Pinecone
                Pinecone-->>Bot: Return Similar Q&A
+               Pinecone->>Redis: Store Similar Q&A
            else Not Found
                Bot->>OpenAI: Generate New Response
-               Bot->>Redis: Cache Response
-               Bot->>Pinecone: Store Response
+               OpenAI->>Redis: Store Response
+               OpenAI->>Pinecone: Store Response
            end
        end
        Bot->>Slack: Send Response
        Slack->>User: Display Response
    ```
 
-### Performance Considerations
-
-- **Caching Strategy**
-  - Redis for hot data (recent/frequent queries)
-  - Pinecone for cold data (historical knowledge)
-
-- **Scalability**
-  - Containerized deployment
-  - Automatic horizontal scaling
-  - Load balancing across instances
-
-- **Reliability**
-  - Fallback mechanisms
-  - Error handling and retry logic
-  - Monitoring and logging
-
-## Performance Optimizations
-
-- Redis Stack implementation for vector similarity search and caching embedding messages
-- Efficient caching strategy for frequently asked questions
-- Asynchronous response storage in both Redis and Pinecone
-- Optimized vector search with cosine similarity
-- Automatic scaling with Heroku
-- Container-based deployment
-
 ## System Bottlenecks & Future Improvements
 
 ### Current Bottlenecks
 
-1. **API Rate Limits**
-   - OpenAI API request limits
-   - Slack API message limits
-   - Pinecone query throughput limits
-
-2. **Data Distribution**
-   - Hot spots in data access for Redis and Pinecone
-
-3. **Latency Issues**
-   - Network latency with external APIs
-   - OpenAI response latency
-
-4. **Resource Constraints**
-   - Redis memory limitations
-   - Pinecone query throughput limits
-   - Container resource limits
-   - Concurrent request handling
+- Redis memory limitations
+- MongoDB storage limitations
+- System resource limitations (CPU, Memory, etc.)
+- OpenAI API request limits
+- Hot spots in data access
+- Network latency with external APIs
+- Concurrent request handling
 
 ### Planned Improvements
 
@@ -195,10 +162,9 @@ graph TD
        B --> C[Caching]
        B --> D[Processing]
        B --> E[Architecture]
-       B --> H[Add nosql database for embedding messages]
        C --> F[Consistent Hashing Enhanced Redis Caching]
-       C --> G[Consistent Hashing Enhanced Pinecone Caching]
-       C --> G[Response Precomputation]
+       C --> G[Distributed MongoDB Storage]
+       C --> H[Consistent Hashing Enhanced Pinecone Caching]
        D --> I[Precompute Embeddings and Responses]
        E --> J[Message Queue]
        E --> K[Load Balancer]
@@ -214,39 +180,12 @@ graph TD
    - Consistent hashing for data distribution
    - Regional data replication
    - Load balancing improvements
+   - Regional data replication and service deployment and failover
 
 4. **Monitoring & Reliability**
    - Enhanced error tracking
-   - Performance metrics dashboard
+   - Monitoring metrics dashboard and alerting
    - Automated failover systems
-
-### Distributed System Implementation
-
-1. **Consistent Hashing**
-
-   ```mermaid
-   graph TD
-       A[Question Input] --> B[Hash Function]
-       B --> C[Hash Ring]
-       C --> D{Node Selection}
-       D --> E[Redis Node 1]
-       D --> F[Redis Node 2]
-       D --> G[Redis Node N]
-       D --> H[Pinecone Shard 1]
-       D --> I[Pinecone Shard 2]
-       D --> J[Pinecone Shard N]
-   ```
-
-2. **Key Distribution Strategy**
-   - Virtual nodes for better distribution
-   - Minimal redistribution on node changes
-   - Configurable replication factor
-
-3. **Benefits**
-   - Even data distribution
-   - Automatic scaling
-   - Minimal data movement
-   - High availability
 
 ## Setup & Installation
 
