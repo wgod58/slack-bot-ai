@@ -1,4 +1,4 @@
-import { MongoClient } from 'mongodb';
+import { MongoClient, ServerApiVersion } from 'mongodb';
 
 import { MONGODB_CONFIG } from '../constants/config.js';
 
@@ -12,22 +12,33 @@ export async function connectToMongoDB() {
     const HOSTS = MONGODB_CONFIG.URI;
     const DATABASE = MONGODB_CONFIG.DB_NAME;
     const OPTIONS = MONGODB_CONFIG.OPTIONS;
-    const CONNECTION_STRING =
-      'mongodb://' + USERNAME + ':' + PASSWORD + '@' + HOSTS + '/' + DATABASE + OPTIONS;
 
-    client = await MongoClient.connect(CONNECTION_STRING);
-    db = client.db(DATABASE);
-    console.log('Connected to MongoDB');
+    const CONNECTION_STRING = `mongodb+srv://${USERNAME}:${PASSWORD}@${HOSTS}/${OPTIONS}`;
 
-    // Create indexes
-    await db.collection('embeddings').createIndex({ text: 1 }, { unique: true });
-    await db
-      .collection('embeddings')
-      .createIndex({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 }); // 30 days TTL
+    if (!client) {
+      client = new MongoClient(CONNECTION_STRING, {
+        serverApi: {
+          version: ServerApiVersion.v1,
+          strict: true,
+          deprecationErrors: true,
+        },
+      });
+
+      await client.connect();
+      db = client.db(DATABASE);
+      console.log('Connected to MongoDB');
+
+      // Create indexes
+      await db.collection('embeddings').createIndex({ text: 1 }, { unique: true });
+      await db.collection('embeddings').createIndex(
+        { createdAt: 1 },
+        { expireAfterSeconds: 30 * 24 * 60 * 60 }, // 30 days TTL
+      );
+    }
 
     return db;
   } catch (error) {
-    console.log('MongoDB connection error:', error);
+    console.error('MongoDB connection error:', error);
     throw error;
   }
 }
