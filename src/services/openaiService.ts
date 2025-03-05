@@ -1,14 +1,14 @@
 import { OpenAI } from 'openai';
 
-import { AI_CONFIG, RESPONSES } from '../constants/config.js';
-import { getEmbeddingFromDB, storeEmbeddingInDB } from './mongoService.js';
-import { getEmbeddingFromCache, storeEmbeddingInCache } from './redisService.js';
+import { AI_CONFIG, RESPONSES } from '../constants/config.ts';
+import { mongoService } from './mongoService.ts';
+import { getEmbeddingFromCache, storeEmbeddingInCache } from './redisService.ts';
 
 const openai = new OpenAI({
   apiKey: AI_CONFIG.OPENAI_API_KEY,
 });
 
-export async function generateSummary(messages) {
+export async function generateSummary(messages: string): Promise<string> {
   try {
     const response = await openai.chat.completions.create({
       model: AI_CONFIG.MODELS.CHAT,
@@ -20,8 +20,13 @@ export async function generateSummary(messages) {
       ],
     });
 
-    return response.choices[0].message.content;
-  } catch (error) {
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error('OpenAI returned empty response');
+    }
+
+    return content;
+  } catch (error: any) {
     console.log('OpenAI Error:', {
       message: error.message,
       status: error.status,
@@ -31,7 +36,7 @@ export async function generateSummary(messages) {
   }
 }
 
-export async function generateResponse(question) {
+export async function generateResponse(question: string): Promise<string> {
   try {
     const response = await openai.chat.completions.create({
       model: AI_CONFIG.MODELS.CHAT,
@@ -52,7 +57,7 @@ export async function generateResponse(question) {
     }
 
     return response.choices[0].message.content;
-  } catch (error) {
+  } catch (error: any) {
     console.log('OpenAI Error:', {
       message: error.message,
       status: error.status,
@@ -62,7 +67,7 @@ export async function generateResponse(question) {
   }
 }
 
-export async function createEmbedding(text) {
+export async function createEmbedding(text: string): Promise<number[]> {
   try {
     // Check Redis cache first
     const cachedEmbedding = await getEmbeddingFromCache(text);
@@ -72,7 +77,7 @@ export async function createEmbedding(text) {
     }
 
     // Check MongoDB if not in cache
-    const dbEmbedding = await getEmbeddingFromDB(text);
+    const dbEmbedding = await mongoService.getEmbeddingFromDB(text);
     if (dbEmbedding) {
       console.log('Using DB embedding');
       // Store in cache for future use
@@ -90,10 +95,10 @@ export async function createEmbedding(text) {
 
     // Store in both cache and DB
     storeEmbeddingInCache(text, embedding);
-    storeEmbeddingInDB(text, embedding);
+    await mongoService.storeEmbeddingInDB(text, embedding);
 
     return embedding;
-  } catch (error) {
+  } catch (error: any) {
     console.log('OpenAI Error:', {
       message: error.message,
       status: error.status,

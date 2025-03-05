@@ -6,20 +6,10 @@ module.exports = {
   },
   extends: ['standard', 'plugin:prettier/recommended'],
   plugins: ['prettier', 'n', 'promise', 'simple-import-sort'],
-  overrides: [
-    {
-      env: {
-        node: true,
-      },
-      files: ['.eslintrc.{js,cjs}'],
-      parserOptions: {
-        sourceType: 'script',
-      },
-    },
-  ],
   parserOptions: {
     ecmaVersion: 'latest',
     sourceType: 'module',
+    parser: '@typescript-eslint/parser',
   },
   rules: {
     quotes: [2, 'single', { avoidEscape: true }],
@@ -29,4 +19,16 @@ module.exports = {
     'simple-import-sort/exports': 'error',
     'n/no-callback-literal': 'off',
   },
+  overrides: [
+    {
+      files: ['*.ts', '*.tsx'],
+      extends: ['plugin:@typescript-eslint/recommended', 'plugin:prettier/recommended'],
+      parser: '@typescript-eslint/parser',
+      plugins: ['@typescript-eslint'],
+      rules: {
+        '@typescript-eslint/no-unused-vars': ['error'],
+        '@typescript-eslint/no-explicit-any': 'warn',
+      },
+    },
+  ],
 };

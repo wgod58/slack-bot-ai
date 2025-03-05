@@ -1,13 +1,16 @@
 import 'dotenv/config';
+import express, { Express } from 'express';
+import { App as SlackApp } from '@slack/bolt';
 
-import express from 'express';
-
-import router from './routes/router.js';
-import { connectToMongoDB } from './services/mongoService.js';
-import { createRedisVectorIndex } from './services/redisService.js';
-import { initialSlackBot, setupSlackListeners } from './services/slackService.js';
+import router from './routes/router';
+import { mongoService } from './services/mongoService';
+import { createRedisVectorIndex } from './services/redisService';
+import { initialSlackBot, setupSlackListeners } from './services/slackService';
 
 export class App {
+  private server: Express;
+  private slackBot: SlackApp | null;
+
   constructor() {
     this.server = express();
     this.slackBot = null;
@@ -15,12 +18,12 @@ export class App {
     this.server.use(express.json());
   }
 
-  async initialize() {
+  async initialize(): Promise<App> {
     try {
       this.server.use('/api', router);
 
       // Initialize MongoDB connection
-      await connectToMongoDB();
+      await mongoService.connect();
       console.log('MongoDB connected successfully');
 
       // Initialize Redis vector index
@@ -43,10 +46,10 @@ export class App {
     }
   }
 
-  async start() {
+  async start(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const PORT = process.env.PORT;
-      this.server.listen(PORT, (error) => {
+      const PORT = process.env.PORT || 3000;
+      this.server.listen(PORT, (error?: Error) => {
         if (error) {
           console.log('Error starting server:', error);
           reject(error);
@@ -59,13 +62,12 @@ export class App {
   }
 
   // Optional cleanup method that can be set by tests
-  onShutdown = null;
+  onShutdown: (() => Promise<void>) | null = null;
 }
 
 const app = new App();
 
 // Start the server if this file is run directly
-
 app.initialize().then(() => app.start());
 
 export default app;

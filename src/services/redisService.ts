@@ -1,23 +1,32 @@
-import Redis from 'ioredis';
+import Redis, { RedisOptions } from 'ioredis';
 
-import { REDIS_CONFIG } from '../constants/config.js';
+import { REDIS_CONFIG } from '../constants/config.ts';
 
-const redisClient = new Redis({
+interface SearchResult {
+  id: string;
+  text: string;
+  response: string;
+  score: number;
+}
+
+const redisConfig: RedisOptions = {
   host: REDIS_CONFIG.HOST,
-  port: REDIS_CONFIG.PORT,
-  username: REDIS_CONFIG.USERNAME,
-  password: REDIS_CONFIG.PASSWORD,
+  port: Number(REDIS_CONFIG.PORT),
+  username: REDIS_CONFIG.USERNAME || undefined,
+  password: REDIS_CONFIG.PASSWORD || undefined,
   maxRetriesPerRequest: 3,
   connectionName: 'slack-bot',
   enableOfflineQueue: true,
   connectTimeout: 10000,
-});
+};
 
-function float32ArrayToBuffer(array) {
+const redisClient = new Redis(redisConfig);
+
+function float32ArrayToBuffer(array: number[]): Buffer {
   return Buffer.from(new Float32Array(array).buffer);
 }
 
-async function createRedisVectorIndex() {
+export async function createRedisVectorIndex(): Promise<void> {
   try {
     const createIndexCommand = [
       'FT.CREATE',
@@ -48,41 +57,49 @@ async function createRedisVectorIndex() {
       'AS',
       'response',
       'TEXT',
-    ];
+    ] as const;
 
     await redisClient.call(...createIndexCommand);
-  } catch (e) {
+    console.log('Vector index created successfully');
+  } catch (e: any) {
     if (e.message.includes('Index already exists')) {
       console.log('Index already exists');
     } else {
       console.log('Error creating vector index:', e);
-      throw e;
+      // Don't throw the error, just log it
     }
   }
 }
 
-async function storeQuestionVectorInRedis(question, response, vector) {
+export async function storeQuestionVectorInRedis(
+  question: string,
+  response: string,
+  vector: number[],
+): Promise<void> {
   try {
     const id = `question:${Date.now()}`;
-    await redisClient.call(
-      'JSON.SET',
-      id,
-      '$',
-      JSON.stringify({
-        vector: Array.from(vector),
+    const vectorBuffer = float32ArrayToBuffer(vector);
+
+    await redisClient
+      .multi()
+      .hset(id, {
+        vector: vectorBuffer,
         text: question,
         response,
         timestamp: new Date().toISOString(),
-      }),
-    );
+      })
+      .exec();
     console.log('Stored redis question vector:', id);
   } catch (error) {
     console.log('Error storing redis question vector:', error);
-    throw error;
+    // Don't throw the error, just log it
   }
 }
 
-async function findSimilarQuestionsInRedis(vector, limit = 5) {
+export async function findSimilarQuestionsInRedis(
+  vector: number[],
+  limit = 5,
+): Promise<SearchResult[]> {
   try {
     const searchCommand = [
       'FT.SEARCH',
@@ -101,20 +118,20 @@ async function findSimilarQuestionsInRedis(vector, limit = 5) {
       'vector_score',
       'DIALECT',
       '2',
-    ];
+    ] as const;
 
     const results = await redisClient.call(...searchCommand);
-    return parseSearchResults(results);
+    return parseSearchResults(results as any[]);
   } catch (error) {
     console.log('Error searching similar questions:', error);
-    throw error;
+    return [];
   }
 }
 
-function parseSearchResults(results) {
+function parseSearchResults(results: any[]): SearchResult[] {
   if (!results || results.length < 2) return [];
 
-  const documents = [];
+  const documents: SearchResult[] = [];
 
   for (let i = 1; i < results.length; i += 2) {
     const docId = results[i];
@@ -126,7 +143,7 @@ function parseSearchResults(results) {
     }
 
     const fieldMap = Object.fromEntries(
-      fieldsArray.reduce((acc, val, index, arr) => {
+      fieldsArray.reduce((acc: [string, string][], val, index, arr) => {
         if (index % 2 === 0) acc.push([val, arr[index + 1]]);
         return acc;
       }, []),
@@ -136,14 +153,14 @@ function parseSearchResults(results) {
       id: docId,
       text: fieldMap.text,
       response: fieldMap.response,
-      score: 1 - parseFloat(fieldMap.vector_score),
+      score: 1 - parseFloat(fieldMap.__vector_score || '0'),
     });
   }
 
   return documents;
 }
 
-export async function getEmbeddingFromCache(text) {
+export async function getEmbeddingFromCache(text: string): Promise<number[] | null> {
   try {
     const key = `${REDIS_CONFIG.PREFIXES.EMBEDDING}${text}`;
     const cachedEmbedding = await redisClient.get(key);
@@ -154,7 +171,7 @@ export async function getEmbeddingFromCache(text) {
   }
 }
 
-export async function storeEmbeddingInCache(text, embedding) {
+export async function storeEmbeddingInCache(text: string, embedding: number[]): Promise<void> {
   console.log('Storing embedding in cache');
   try {
     const key = `${REDIS_CONFIG.PREFIXES.EMBEDDING}${text}`;
@@ -164,7 +181,7 @@ export async function storeEmbeddingInCache(text, embedding) {
   }
 }
 
-async function checkHealth() {
+export async function checkHealth(): Promise<boolean> {
   try {
     const ping = await redisClient.ping();
     return ping === 'PONG';
@@ -174,10 +191,4 @@ async function checkHealth() {
   }
 }
 
-export {
-  checkHealth,
-  createRedisVectorIndex,
-  findSimilarQuestionsInRedis,
-  redisClient,
-  storeQuestionVectorInRedis,
-};
+export { redisClient };

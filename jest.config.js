@@ -1,10 +1,10 @@
 module.exports = {
   transform: {
-    '^.+\\.jsx?$': 'babel-jest',
+    '^.+\\.(ts|tsx)$': 'ts-jest',
   },
   testEnvironment: 'node',
-  moduleFileExtensions: ['js', 'json'],
-  testMatch: ['**/test/**/*.test.js'],
+  moduleFileExtensions: ['js', 'json', 'ts'],
+  testMatch: ['**/test/**/*.test.ts'],
   collectCoverageFrom: ['src/**/*.js', 'app.js', '!src/constants/**', '!**/node_modules/**'],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov'],

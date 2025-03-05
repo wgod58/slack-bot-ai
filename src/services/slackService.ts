@@ -1,48 +1,73 @@
-import { App } from '@slack/bolt';
+import { App, AppOptions, SayFn } from '@slack/bolt';
 
-import { AI_CONFIG, COMMANDS, RESPONSES, SLACK_CONFIG } from '../constants/config.js';
-import { createEmbedding, generateResponse, generateSummary } from './openaiService.js';
+import { AI_CONFIG, COMMANDS, RESPONSES, SLACK_CONFIG } from '../constants/config.ts';
+import { createEmbedding, generateResponse, generateSummary } from './openaiService.ts';
 import {
   findSimilarQuestionsInPinecone,
   storeQuestionVectorInPinecone,
-} from './pineconeService.js';
-import { findSimilarQuestionsInRedis, storeQuestionVectorInRedis } from './redisService.js';
+} from './pineconeService.ts';
+import { findSimilarQuestionsInRedis, storeQuestionVectorInRedis } from './redisService.ts';
 
-let slackBot;
+interface ThreadMessage {
+  text: string;
+}
 
-export function initialSlackBot(socketMode = true, receiver) {
+interface SlackMessage {
+  thread_ts?: string;
+  subtype?: string;
+  channel: string;
+  ts: string;
+  text: string;
+  user: string;
+  type: string;
+  team?: string;
+  event_ts: string;
+}
+
+let slackBot: App | null = null;
+
+export function initialSlackBot(socketMode = true, receiver?: any): App {
   if (!slackBot) {
-    slackBot = new App({
+    const options: AppOptions = {
       token: SLACK_CONFIG.BOT_TOKEN,
       signingSecret: SLACK_CONFIG.SIGNING_SECRET,
       socketMode,
       appToken: SLACK_CONFIG.APP_TOKEN,
-      receiver,
-    });
+    };
+
+    if (receiver) {
+      options.receiver = receiver;
+    }
+
+    slackBot = new App(options);
   }
   return slackBot;
 }
 
 // Get thread messages
-export async function getThreadMessages(channel, threadTs) {
+export async function getThreadMessages(channel: string, threadTs: string): Promise<string[]> {
+  if (!slackBot) throw new Error('Slack bot not initialized');
+
   const threadMessages = await slackBot.client.conversations.replies({
     channel,
     ts: threadTs,
   });
-  return threadMessages.messages.map((m) => m.text);
+  return (threadMessages.messages as ThreadMessage[]).map((m) => m.text);
 }
 
 // Setup Slack listeners
-export async function setupSlackListeners(slackBot) {
+export async function setupSlackListeners(bot: App): Promise<void> {
   // Listen to direct mentions (@bot)
-  slackBot.event('app_mention', handleAppMention);
+  bot.event('app_mention', handleAppMention);
 
   // Listen to messages in channels
-  slackBot.message(handleMessage);
+  bot.message(async ({ message, say }) => {
+    await handleMessage({ message: message as SlackMessage, say });
+  });
 }
 
 // Handle app mentions
-async function handleAppMention({ event, say }) {
+async function handleAppMention({ event, say }: { event: any; say: SayFn }): Promise<void> {
   console.log('handleAppMention Bot mentioned:', event);
   await say({
     text: "Hello! I'm here to help. Use `!summarize` in a thread to get a summary.",
@@ -51,7 +76,13 @@ async function handleAppMention({ event, say }) {
 }
 
 // Handle incoming messages
-async function handleMessage({ message, say }) {
+async function handleMessage({
+  message,
+  say,
+}: {
+  message: SlackMessage;
+  say: SayFn;
+}): Promise<void> {
   try {
     console.log('handleMessage received message:', message);
     // Ignore bot messages
@@ -105,7 +136,7 @@ async function handleMessage({ message, say }) {
       text: RESPONSES.DEFAULT(message.text),
       thread_ts: message.thread_ts || message.ts,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.log('Slack Error:', {
       error: error.message,
       data: error.data,
@@ -119,7 +150,7 @@ async function handleMessage({ message, say }) {
 }
 
 // Handle summarize command
-async function handleSummarizeCommand(message, say) {
+async function handleSummarizeCommand(message: SlackMessage, say: SayFn): Promise<void> {
   try {
     if (!message.thread_ts) {
       await say({
@@ -145,7 +176,7 @@ async function handleSummarizeCommand(message, say) {
 }
 
 // Handle questions
-async function handleQuestion(message, say) {
+async function handleQuestion(message: SlackMessage, say: SayFn): Promise<void> {
   try {
     const questionEmbedding = await createEmbedding(message.text);
     // First check Redis for similar questions
