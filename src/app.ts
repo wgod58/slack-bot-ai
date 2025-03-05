@@ -5,7 +5,7 @@ import { App as SlackApp } from '@slack/bolt';
 import router from './routes/router';
 import { mongoService } from './services/mongoService';
 import { redisService } from './services/redisService';
-import { initialSlackBot, setupSlackListeners } from './services/slackService';
+import { slackService } from './services/slackService';
 
 export class App {
   private server: Express;
@@ -31,13 +31,13 @@ export class App {
       console.log('Redis vector index created successfully');
 
       // Start Slack bot
-      this.slackBot = initialSlackBot();
+      this.slackBot = slackService.initialize();
       await this.slackBot.start();
       console.log('Slack bot is running!');
 
       // Setup Slack listeners
       console.log('Setting up Slack listeners...');
-      await setupSlackListeners(this.slackBot);
+      await slackService.setupListeners();
 
       return this;
     } catch (error) {
