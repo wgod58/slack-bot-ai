@@ -26,17 +26,18 @@ export class MessageHandlerFactory implements IMessageHandlerFactory {
     ];
   }
 
-  public static getInstance(): MessageHandlerFactory {
+  public static getInstance(): IMessageHandlerFactory {
     if (!this.instance) {
       this.instance = new MessageHandlerFactory();
     }
 
-    return this.instance as MessageHandlerFactory;
+    return this.instance;
   }
 
   public getHandler(message: SlackMessage): IMessageHandler {
-    return (
-      this.handlers.find((handler) => handler.canHandle(message)) || new DefaultMessageHandler()
-    );
+    const handler = this.handlers.find((handler) => handler.canHandle(message));
+    return handler as IMessageHandler;
   }
 }
+
+export const messageHandlerFactory = MessageHandlerFactory.getInstance();

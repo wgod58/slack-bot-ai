@@ -65,6 +65,7 @@ class PineconeService implements IPineconeService {
   }
 
   public async findSimilarQuestions(questionEmbedding: number[], limit = 5): Promise<QAMatch[]> {
+    console.log('Finding similar questions in Pinecone');
     try {
       if (!PINECONE_CONFIG.INDEX_NAME) {
         throw new Error('Pinecone index name is required');

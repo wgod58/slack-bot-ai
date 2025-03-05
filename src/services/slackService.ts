@@ -1,18 +1,13 @@
 import { App, AppOptions, Receiver, SayFn } from '@slack/bolt';
 
 import { RESPONSES, SLACK_CONFIG } from '../constants/config';
-import { MessageHandlerFactory } from '../factories/MessageHandlerFactory';
+import { messageHandlerFactory } from '../factories/MessageHandlerFactory';
 import { ISlackService } from '../interfaces/ServiceInterfaces';
 import { SlackMessage, ThreadMessage } from '../types/SlackTypes';
 
 class SlackService implements ISlackService {
   private static instance: ISlackService;
   private client: App | null = null;
-  private messageHandlerFactory: MessageHandlerFactory;
-
-  private constructor() {
-    this.messageHandlerFactory = MessageHandlerFactory.getInstance();
-  }
 
   public static getInstance(): SlackService {
     if (!SlackService.instance) {
@@ -92,7 +87,7 @@ class SlackService implements ISlackService {
       console.log('handleMessage received message:', message);
 
       // Get appropriate handler and handle the message
-      const handler = this.messageHandlerFactory.getHandler(message);
+      const handler = messageHandlerFactory.getHandler(message);
       console.log('handleMessage handler:', handler);
       await handler.handle(message, say);
     } catch (error) {

@@ -72,7 +72,6 @@ export class QuestionMessageHandler implements IMessageHandler {
       // Check Redis first
       const redisSimilar: QAMatch[] = await redisService.findSimilarQuestions(questionEmbedding);
       const bestRedisMatch = redisSimilar[0];
-      console.log('Best Redis match:', bestRedisMatch);
       if (bestRedisMatch && bestRedisMatch.score > AI_CONFIG.MATCH_SCORE) {
         await say({
           text: `I found a similar question in cache! Here's the answer:\n${bestRedisMatch.response}`,
