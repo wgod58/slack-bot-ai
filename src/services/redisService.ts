@@ -18,7 +18,7 @@ interface IRedisService {
   checkHealth(): Promise<boolean>;
 }
 
-export class RedisService implements IRedisService {
+class RedisService implements IRedisService {
   private static instance: RedisService;
   private client: Redis;
 

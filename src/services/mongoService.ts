@@ -9,7 +9,7 @@ interface IMongoService {
   storeEmbeddingInDB(text: string, embedding: number[]): Promise<void>;
 }
 
-export class MongoService implements IMongoService {
+class MongoService implements IMongoService {
   private static instance: MongoService;
   private client: MongoClient | null = null;
   private db: Db | null = null;

@@ -2,10 +2,7 @@ import { App, AppOptions, SayFn } from '@slack/bolt';
 
 import { AI_CONFIG, COMMANDS, RESPONSES, SLACK_CONFIG } from '../constants/config.ts';
 import { createEmbedding, generateResponse, generateSummary } from './openaiService.ts';
-import {
-  findSimilarQuestionsInPinecone,
-  storeQuestionVectorInPinecone,
-} from './pineconeService.ts';
+import { pineconeService } from './pineconeService.ts';
 import { redisService } from './redisService.ts';
 
 interface ThreadMessage {
@@ -195,7 +192,7 @@ async function handleQuestion(message: SlackMessage, say: SayFn): Promise<void> 
 
     // If not in Redis, check Pinecone
     console.log('Finding similar questions in Pinecone');
-    const similarQuestions = await findSimilarQuestionsInPinecone(questionEmbedding);
+    const similarQuestions = await pineconeService.findSimilarQuestions(questionEmbedding);
     const bestMatch = similarQuestions[0];
 
     if (bestMatch && bestMatch.score > AI_CONFIG.MATCH_SCORE) {
@@ -222,7 +219,7 @@ async function handleQuestion(message: SlackMessage, say: SayFn): Promise<void> 
     console.log('Storing question in Redis');
     await redisService.storeQuestionVector(message.text, response, questionEmbedding);
     console.log('Storing question in Pinecone');
-    await storeQuestionVectorInPinecone(message.text, response, questionEmbedding);
+    await pineconeService.storeQuestionVector(message.text, response, questionEmbedding);
   } catch (error) {
     console.log('Error handleQuestion:', error);
     await say({

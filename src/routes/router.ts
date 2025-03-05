@@ -1,6 +1,6 @@
 import express, { Request, Response, Router } from 'express';
 
-import { pinecone } from '../services/pineconeService.ts';
+import { pineconeService } from '../services/pineconeService.ts';
 import { redisService } from '../services/redisService.ts';
 import { initialSlackBot } from '../services/slackService.ts';
 
@@ -30,7 +30,7 @@ router.get('/health', async (_: Request, res: Response) => {
 
     // Check Redis connection
     const redisStatus = await redisService.checkHealth();
-    const pineconeStatus = !!pinecone;
+    const pineconeStatus = await pineconeService.checkHealth();
 
     const services: HealthServices = {
       server: 'up',
