@@ -50,12 +50,12 @@ class OpenAIService implements IOpenAIService {
       }
 
       return content;
-    } catch (error: any) {
-      console.log('OpenAI Error:', {
-        message: error.message,
-        status: error.status,
-        type: error.type,
-      });
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.log('OpenAI Error:', {
+          message: error.message,
+        });
+      }
       throw new Error(RESPONSES.QUESTION_ERROR);
     }
   }
@@ -81,12 +81,12 @@ class OpenAIService implements IOpenAIService {
       }
 
       return response.choices[0].message.content;
-    } catch (error: any) {
-      console.log('OpenAI Error:', {
-        message: error.message,
-        status: error.status,
-        type: error.type,
-      });
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.log('OpenAI Error:', {
+          message: error.message,
+        });
+      }
       throw new Error(RESPONSES.QUESTION_ERROR);
     }
   }
@@ -124,12 +124,12 @@ class OpenAIService implements IOpenAIService {
       ]);
 
       return embedding;
-    } catch (error: any) {
-      console.log('OpenAI Error:', {
-        message: error.message,
-        status: error.status,
-        type: error.type,
-      });
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.log('OpenAI Error:', {
+          message: error.message,
+        });
+      }
       throw error;
     }
   }

@@ -1,4 +1,4 @@
-import { SayFn } from '@slack/bolt';
+import { App, Receiver, SayFn } from '@slack/bolt';
 
 import { SlackMessage } from '../types/SlackTypes';
 
@@ -42,7 +42,7 @@ export interface IOpenAIService extends IService {
 }
 
 export interface ISlackService extends IService {
-  initialize(socketMode?: boolean, receiver?: any): any;
+  initialize(socketMode?: boolean, receiver?: Receiver): App;
   getThreadMessages(channel: string, threadTs: string): Promise<string[]>;
   setupListeners(): Promise<void>;
   handleAppMention(event: SlackMessage, say: SayFn): Promise<void>;
