@@ -6,7 +6,7 @@ import {
   findSimilarQuestionsInPinecone,
   storeQuestionVectorInPinecone,
 } from './pineconeService.ts';
-import { findSimilarQuestionsInRedis, storeQuestionVectorInRedis } from './redisService.ts';
+import { redisService } from './redisService.ts';
 
 interface ThreadMessage {
   text: string;
@@ -181,7 +181,7 @@ async function handleQuestion(message: SlackMessage, say: SayFn): Promise<void> 
     const questionEmbedding = await createEmbedding(message.text);
     // First check Redis for similar questions
     console.log('Finding similar questions in Redis');
-    const redisSimilar = await findSimilarQuestionsInRedis(questionEmbedding);
+    const redisSimilar = await redisService.findSimilarQuestions(questionEmbedding);
     const bestRedisMatch = redisSimilar[0];
 
     if (bestRedisMatch && bestRedisMatch.score > AI_CONFIG.MATCH_SCORE) {
@@ -205,7 +205,7 @@ async function handleQuestion(message: SlackMessage, say: SayFn): Promise<void> 
         thread_ts: message.thread_ts || message.ts,
       });
       console.log('Storing question in Redis');
-      await storeQuestionVectorInRedis(message.text, bestMatch.response, questionEmbedding);
+      await redisService.storeQuestionVector(message.text, bestMatch.response, questionEmbedding);
       return;
     }
 
@@ -220,7 +220,7 @@ async function handleQuestion(message: SlackMessage, say: SayFn): Promise<void> 
     });
 
     console.log('Storing question in Redis');
-    await storeQuestionVectorInRedis(message.text, response, questionEmbedding);
+    await redisService.storeQuestionVector(message.text, response, questionEmbedding);
     console.log('Storing question in Pinecone');
     await storeQuestionVectorInPinecone(message.text, response, questionEmbedding);
   } catch (error) {

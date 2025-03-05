@@ -4,7 +4,7 @@ import { App as SlackApp } from '@slack/bolt';
 
 import router from './routes/router';
 import { mongoService } from './services/mongoService';
-import { createRedisVectorIndex } from './services/redisService';
+import { redisService } from './services/redisService';
 import { initialSlackBot, setupSlackListeners } from './services/slackService';
 
 export class App {
@@ -27,7 +27,7 @@ export class App {
       console.log('MongoDB connected successfully');
 
       // Initialize Redis vector index
-      await createRedisVectorIndex();
+      await redisService.createVectorIndex();
       console.log('Redis vector index created successfully');
 
       // Start Slack bot

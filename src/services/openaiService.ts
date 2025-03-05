@@ -2,7 +2,7 @@ import { OpenAI } from 'openai';
 
 import { AI_CONFIG, RESPONSES } from '../constants/config.ts';
 import { mongoService } from './mongoService.ts';
-import { getEmbeddingFromCache, storeEmbeddingInCache } from './redisService.ts';
+import { redisService } from './redisService.ts';
 
 const openai = new OpenAI({
   apiKey: AI_CONFIG.OPENAI_API_KEY,
@@ -70,7 +70,7 @@ export async function generateResponse(question: string): Promise<string> {
 export async function createEmbedding(text: string): Promise<number[]> {
   try {
     // Check Redis cache first
-    const cachedEmbedding = await getEmbeddingFromCache(text);
+    const cachedEmbedding = await redisService.getEmbeddingFromCache(text);
     if (cachedEmbedding) {
       console.log('Using cached embedding');
       return cachedEmbedding;
@@ -81,7 +81,7 @@ export async function createEmbedding(text: string): Promise<number[]> {
     if (dbEmbedding) {
       console.log('Using DB embedding');
       // Store in cache for future use
-      storeEmbeddingInCache(text, dbEmbedding);
+      redisService.storeEmbeddingInCache(text, dbEmbedding);
       return dbEmbedding;
     }
 
@@ -94,7 +94,7 @@ export async function createEmbedding(text: string): Promise<number[]> {
     const embedding = response.data[0].embedding;
 
     // Store in both cache and DB
-    storeEmbeddingInCache(text, embedding);
+    redisService.storeEmbeddingInCache(text, embedding);
     await mongoService.storeEmbeddingInDB(text, embedding);
 
     return embedding;

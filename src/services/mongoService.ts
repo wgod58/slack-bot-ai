@@ -5,6 +5,8 @@ interface IMongoService {
   connect(): Promise<Db>;
   close(): Promise<void>;
   getDb(): Db | null;
+  getEmbeddingFromDB(text: string): Promise<number[] | null>;
+  storeEmbeddingInDB(text: string, embedding: number[]): Promise<void>;
 }
 
 export class MongoService implements IMongoService {
