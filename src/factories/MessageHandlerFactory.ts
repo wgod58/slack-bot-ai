@@ -5,7 +5,7 @@ import {
   IMessageHandler,
   QuestionMessageHandler,
   SummarizeMessageHandler,
-} from '../handlers/MessageHandler.ts';
+} from '../handlers/MessageHandler';
 import { SlackMessage } from '../types/SlackTypes';
 
 export class MessageHandlerFactory {

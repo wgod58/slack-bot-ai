@@ -1,7 +1,7 @@
 import { OpenAI } from 'openai';
 
 import { AI_CONFIG, RESPONSES } from '../constants/config';
-import { ServiceFactory } from '../factories/ServiceFactory.ts';
+import { ServiceFactory } from '../factories/ServiceFactory';
 import { IMongoService, IOpenAIService, IRedisService } from '../interfaces/ServiceInterfaces';
 
 class OpenAIService implements IOpenAIService {

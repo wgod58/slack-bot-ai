@@ -1,8 +1,8 @@
 import express, { Request, Response, Router } from 'express';
 
-import { pineconeService } from '../services/pineconeService.ts';
-import { redisService } from '../services/redisService.ts';
-import { slackService } from '../services/slackService.ts';
+import { pineconeService } from '../services/pineconeService';
+import { redisService } from '../services/redisService';
+import { slackService } from '../services/slackService';
 
 interface HealthServices {
   server: 'up';
