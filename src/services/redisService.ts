@@ -1,21 +1,13 @@
 import Redis, { RedisOptions } from 'ioredis';
 
-import { REDIS_CONFIG } from '../constants/config.ts';
+import { REDIS_CONFIG } from '../constants/config';
+import { IRedisService } from '../interfaces/ServiceInterfaces';
 
 interface SearchResult {
   id: string;
   text: string;
   response: string;
   score: number;
-}
-
-interface IRedisService {
-  createVectorIndex(): Promise<void>;
-  storeQuestionVector(question: string, response: string, vector: number[]): Promise<void>;
-  findSimilarQuestions(vector: number[], limit?: number): Promise<SearchResult[]>;
-  getEmbeddingFromCache(text: string): Promise<number[] | null>;
-  storeEmbeddingInCache(text: string, embedding: number[]): Promise<void>;
-  checkHealth(): Promise<boolean>;
 }
 
 class RedisService implements IRedisService {
@@ -88,7 +80,6 @@ class RedisService implements IRedisService {
         console.log('Index already exists');
       } else {
         console.log('Error creating vector index:', e);
-        // Don't throw the error, just log it
       }
     }
   }
@@ -114,7 +105,6 @@ class RedisService implements IRedisService {
       console.log('Stored redis question vector:', id);
     } catch (error) {
       console.log('Error storing redis question vector:', error);
-      // Don't throw the error, just log it
     }
   }
 

@@ -1,6 +1,7 @@
 import { Pinecone } from '@pinecone-database/pinecone';
 
-import { PINECONE_CONFIG } from '../constants/config.ts';
+import { PINECONE_CONFIG } from '../constants/config';
+import { IPineconeService } from '../interfaces/ServiceInterfaces';
 
 interface QAMatch {
   question: string;
@@ -13,17 +14,6 @@ interface QAMetadata {
   response: string;
   timestamp: string;
   type: 'qa_pair';
-}
-
-interface IPineconeService {
-  storeQuestionVector(
-    question: string,
-    response: string,
-    questionEmbedding: number[],
-  ): Promise<void>;
-  findSimilarQuestions(questionEmbedding: number[], limit?: number): Promise<QAMatch[]>;
-  checkHealth(): Promise<boolean>;
-  getClient(): Pinecone;
 }
 
 class PineconeService implements IPineconeService {
