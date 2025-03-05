@@ -1,17 +1,19 @@
 import Redis, { RedisOptions } from 'ioredis';
 
 import { REDIS_CONFIG } from '../constants/config';
-import { IRedisService } from '../interfaces/ServiceInterfaces';
+import { IRedisService, QAMatch } from '../interfaces/ServiceInterfaces';
 
-interface SearchResult {
-  id: string;
-  text: string;
-  response: string;
-  score: number;
+interface RedisSearchResult {
+  id: string; // Assuming the ID of the document
+  fields: {
+    text: string;
+    response: string;
+    vector_score: string; // Assuming this is a string; adjust if it's a number
+  };
 }
 
 class RedisService implements IRedisService {
-  private static instance: RedisService;
+  private static instance: IRedisService;
   private client: Redis;
 
   private constructor() {
@@ -29,7 +31,7 @@ class RedisService implements IRedisService {
     this.client = new Redis(redisConfig);
   }
 
-  public static getInstance(): RedisService {
+  public static getInstance(): IRedisService {
     if (!RedisService.instance) {
       RedisService.instance = new RedisService();
     }
@@ -75,8 +77,8 @@ class RedisService implements IRedisService {
 
       await this.client.call(...createIndexCommand);
       console.log('Vector index created successfully');
-    } catch (e: any) {
-      if (e.message.includes('Index already exists')) {
+    } catch (e: unknown) {
+      if (e instanceof Error && e.message.includes('Index already exists')) {
         console.log('Index already exists');
       } else {
         console.log('Error creating vector index:', e);
@@ -91,24 +93,26 @@ class RedisService implements IRedisService {
   ): Promise<void> {
     try {
       const id = `question:${Date.now()}`;
-      const vectorBuffer = this.float32ArrayToBuffer(vector);
 
-      await this.client
-        .multi()
-        .hset(id, {
-          vector: vectorBuffer,
+      await this.client.call(
+        'JSON.SET',
+        id,
+        '$',
+        JSON.stringify({
+          vector: Array.from(vector),
           text: question,
           response,
           timestamp: new Date().toISOString(),
-        })
-        .exec();
+        }),
+      );
       console.log('Stored redis question vector:', id);
     } catch (error) {
       console.log('Error storing redis question vector:', error);
     }
   }
 
-  public async findSimilarQuestions(vector: number[], limit = 5): Promise<SearchResult[]> {
+  public async findSimilarQuestions(vector: number[], limit = 5): Promise<QAMatch[]> {
+    console.log('Finding similar questions in Redis cache');
     try {
       const searchCommand = [
         'FT.SEARCH',
@@ -130,17 +134,17 @@ class RedisService implements IRedisService {
       ] as const;
 
       const results = await this.client.call(...searchCommand);
-      return this.parseSearchResults(results as any[]);
+      return this.parseSearchResults(results as RedisSearchResult[]);
     } catch (error) {
       console.log('Error searching similar questions:', error);
       return [];
     }
   }
 
-  private parseSearchResults(results: any[]): SearchResult[] {
+  private parseSearchResults(results: RedisSearchResult[]): QAMatch[] {
     if (!results || results.length < 2) return [];
 
-    const documents: SearchResult[] = [];
+    const documents = [];
 
     for (let i = 1; i < results.length; i += 2) {
       const docId = results[i];
@@ -152,17 +156,15 @@ class RedisService implements IRedisService {
       }
 
       const fieldMap = Object.fromEntries(
-        fieldsArray.reduce((acc: [string, string][], val, index, arr) => {
+        fieldsArray.reduce((acc, val, index, arr) => {
           if (index % 2 === 0) acc.push([val, arr[index + 1]]);
           return acc;
         }, []),
       );
 
       documents.push({
-        id: docId,
-        text: fieldMap.text,
         response: fieldMap.response,
-        score: 1 - parseFloat(fieldMap.__vector_score || '0'),
+        score: 1 - parseFloat(fieldMap.vector_score),
       });
     }
 
@@ -198,10 +200,6 @@ class RedisService implements IRedisService {
       console.log('Redis health check failed:', error);
       return false;
     }
-  }
-
-  public getClient(): Redis {
-    return this.client;
   }
 }
 

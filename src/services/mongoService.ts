@@ -1,19 +1,19 @@
 import { Db, MongoClient, ServerApiVersion } from 'mongodb';
+
 import { MONGODB_CONFIG } from '../constants/config';
 import { IMongoService } from '../interfaces/ServiceInterfaces';
 
 class MongoService implements IMongoService {
-  private static instance: MongoService;
+  private static instance: IMongoService;
+
   private client: MongoClient | null = null;
   private db: Db | null = null;
-
-  private constructor() {}
 
   public static getInstance(): MongoService {
     if (!MongoService.instance) {
       MongoService.instance = new MongoService();
     }
-    return MongoService.instance;
+    return MongoService.instance as MongoService;
   }
 
   public async connect(): Promise<void> {
@@ -91,4 +91,4 @@ class MongoService implements IMongoService {
 }
 
 // Export singleton instance
-export const mongoService = MongoService.getInstance();
+export const mongoService: MongoService = MongoService.getInstance();

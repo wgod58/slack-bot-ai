@@ -1,13 +1,7 @@
-import { Pinecone } from '@pinecone-database/pinecone';
+import { Pinecone, QueryResponse, RecordMetadata } from '@pinecone-database/pinecone';
 
 import { PINECONE_CONFIG } from '../constants/config';
-import { IPineconeService } from '../interfaces/ServiceInterfaces';
-
-interface QAMatch {
-  question: string;
-  response: string;
-  score: number;
-}
+import { IPineconeService, QAMatch } from '../interfaces/ServiceInterfaces';
 
 interface QAMetadata {
   question: string;
@@ -17,7 +11,7 @@ interface QAMetadata {
 }
 
 class PineconeService implements IPineconeService {
-  private static instance: PineconeService;
+  private static instance: IPineconeService;
   private client: Pinecone;
 
   private constructor() {
@@ -34,7 +28,7 @@ class PineconeService implements IPineconeService {
     if (!PineconeService.instance) {
       PineconeService.instance = new PineconeService();
     }
-    return PineconeService.instance;
+    return PineconeService.instance as PineconeService;
   }
 
   public async storeQuestionVector(
@@ -78,23 +72,24 @@ class PineconeService implements IPineconeService {
 
       const index = this.client.Index(PINECONE_CONFIG.INDEX_NAME);
 
-      const queryResponse = await index.query({
+      const queryResponse: QueryResponse<RecordMetadata> = await index.query({
         vector: questionEmbedding,
         topK: limit,
         includeMetadata: true,
       });
 
-      return queryResponse.matches
+      const result: QAMatch[] = queryResponse.matches
         .filter((match): match is typeof match & { metadata: QAMetadata; score: number } => {
           return Boolean(
             match.metadata?.question && match.metadata?.response && typeof match.score === 'number',
           );
         })
         .map((match) => ({
-          question: match.metadata.question,
           response: match.metadata.response,
           score: match.score,
         }));
+
+      return result;
     } catch (error) {
       console.log('Error querying Pinecone:', error);
       throw error;
@@ -113,10 +108,6 @@ class PineconeService implements IPineconeService {
       console.log('Pinecone health check failed:', error);
       return false;
     }
-  }
-
-  public getClient(): Pinecone {
-    return this.client;
   }
 }
 

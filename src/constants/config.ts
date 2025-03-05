@@ -16,8 +16,8 @@ export const RESPONSES = {
 • \`!help\` - Show this help message
 • Say hello`,
 
-  DEFAULT: (text: string) => `I received your message: "${text}"
-Need help? Try \`!help\` for a list of commands`,
+  DEFAULT: (text: string) =>
+    `I received your message: "${text}" Need help? Try \`!help\` for a list of commands`,
 
   ERROR: 'Sorry, I encountered an error processing your request.',
   QUESTION_ERROR: "I'm having trouble answering your question right now. Please try again later.",

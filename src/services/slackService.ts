@@ -1,12 +1,12 @@
-import { App, AppOptions, SayFn } from '@slack/bolt';
+import { App, AppOptions, Receiver, SayFn } from '@slack/bolt';
 
 import { RESPONSES, SLACK_CONFIG } from '../constants/config';
 import { MessageHandlerFactory } from '../factories/MessageHandlerFactory';
-import { SlackMessage, ThreadMessage } from '../types/SlackTypes';
 import { ISlackService } from '../interfaces/ServiceInterfaces';
+import { SlackMessage, ThreadMessage } from '../types/SlackTypes';
 
 class SlackService implements ISlackService {
-  private static instance: SlackService;
+  private static instance: ISlackService;
   private client: App | null = null;
   private messageHandlerFactory: MessageHandlerFactory;
 
@@ -18,10 +18,10 @@ class SlackService implements ISlackService {
     if (!SlackService.instance) {
       SlackService.instance = new SlackService();
     }
-    return SlackService.instance;
+    return SlackService.instance as SlackService;
   }
 
-  public initialize(socketMode = true, receiver?: any): App {
+  public initialize(socketMode = true, receiver?: Receiver): App {
     if (!this.client) {
       const options: AppOptions = {
         token: SLACK_CONFIG.BOT_TOKEN,
@@ -54,7 +54,7 @@ class SlackService implements ISlackService {
 
     // Listen to direct mentions (@bot)
     this.client.event('app_mention', async ({ event, say }) => {
-      await this.handleAppMention(event, say);
+      await this.handleAppMention(event as SlackMessage, say);
     });
 
     // Listen to messages in channels
@@ -63,7 +63,7 @@ class SlackService implements ISlackService {
     });
   }
 
-  public async handleAppMention(event: any, say: SayFn): Promise<void> {
+  public async handleAppMention(event: SlackMessage, say: SayFn): Promise<void> {
     console.log('handleAppMention Bot mentioned:', event);
     await say({
       text: "Hello! I'm here to help. Use `!summarize` in a thread to get a summary.",
@@ -95,11 +95,9 @@ class SlackService implements ISlackService {
       const handler = this.messageHandlerFactory.getHandler(message);
       console.log('handleMessage handler:', handler);
       await handler.handle(message, say);
-    } catch (error: any) {
+    } catch (error) {
       console.log('Slack Error:', {
-        error: error.message,
-        data: error.data,
-        stack: error.stack,
+        error: error instanceof Error ? error.message : String(error),
       });
       await say({
         text: RESPONSES.ERROR,
@@ -119,10 +117,6 @@ class SlackService implements ISlackService {
       console.log('Slack health check failed:', error);
       return false;
     }
-  }
-
-  public getClient(): App | null {
-    return this.client;
   }
 }
 

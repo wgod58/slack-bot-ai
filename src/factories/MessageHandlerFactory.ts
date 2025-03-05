@@ -7,9 +7,13 @@ import {
   SummarizeMessageHandler,
 } from '../handlers/MessageHandler';
 import { SlackMessage } from '../types/SlackTypes';
+// Singleton factory class for creating message handlers
+interface IMessageHandlerFactory {
+  getHandler(message: SlackMessage): IMessageHandler;
+}
 
-export class MessageHandlerFactory {
-  private static instance: MessageHandlerFactory;
+export class MessageHandlerFactory implements IMessageHandlerFactory {
+  private static instance: IMessageHandlerFactory;
   private handlers: IMessageHandler[];
 
   private constructor() {
@@ -23,10 +27,11 @@ export class MessageHandlerFactory {
   }
 
   public static getInstance(): MessageHandlerFactory {
-    if (!MessageHandlerFactory.instance) {
-      MessageHandlerFactory.instance = new MessageHandlerFactory();
+    if (!this.instance) {
+      this.instance = new MessageHandlerFactory();
     }
-    return MessageHandlerFactory.instance;
+
+    return this.instance as MessageHandlerFactory;
   }
 
   public getHandler(message: SlackMessage): IMessageHandler {

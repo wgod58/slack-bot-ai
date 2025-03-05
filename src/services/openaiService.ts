@@ -1,13 +1,13 @@
 import { OpenAI } from 'openai';
 
 import { AI_CONFIG, RESPONSES } from '../constants/config';
-import { ServiceFactory } from '../factories/ServiceFactory';
-import { IMongoService, IOpenAIService, IRedisService } from '../interfaces/ServiceInterfaces';
+import { IOpenAIService } from '../interfaces/ServiceInterfaces';
+import { mongoService } from './mongoService';
+import { redisService } from './redisService';
 
 class OpenAIService implements IOpenAIService {
-  private static instance: OpenAIService;
+  private static instance: IOpenAIService;
   private client: OpenAI;
-  private serviceFactory: ServiceFactory | null = null;
 
   private constructor() {
     this.client = new OpenAI({
@@ -15,14 +15,7 @@ class OpenAIService implements IOpenAIService {
     });
   }
 
-  private getServiceFactory(): ServiceFactory {
-    if (!this.serviceFactory) {
-      this.serviceFactory = ServiceFactory.getInstance();
-    }
-    return this.serviceFactory;
-  }
-
-  public static getInstance(): OpenAIService {
+  public static getInstance(): IOpenAIService {
     if (!OpenAIService.instance) {
       OpenAIService.instance = new OpenAIService();
     }
@@ -100,9 +93,6 @@ class OpenAIService implements IOpenAIService {
 
   public async createEmbedding(text: string): Promise<number[]> {
     try {
-      const redisService: IRedisService = this.getServiceFactory().getRedisService();
-      const mongoService: IMongoService = this.getServiceFactory().getMongoService();
-
       // Check Redis cache first
       const cachedEmbedding = await redisService.getEmbeddingFromCache(text);
       if (cachedEmbedding) {
@@ -142,10 +132,6 @@ class OpenAIService implements IOpenAIService {
       });
       throw error;
     }
-  }
-
-  public getClient(): OpenAI {
-    return this.client;
   }
 }
 

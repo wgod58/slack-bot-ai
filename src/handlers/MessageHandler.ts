@@ -1,9 +1,12 @@
 import { SayFn } from '@slack/bolt';
+
 import { AI_CONFIG, RESPONSES } from '../constants/config';
-import { ServiceFactory } from '../factories/ServiceFactory';
-import { SlackMessage } from '../types/SlackTypes';
+import { QAMatch } from '../interfaces/ServiceInterfaces';
 import { createEmbedding, generateResponse, generateSummary } from '../services/openaiService';
-import { IPineconeService, IRedisService, ISlackService } from '../interfaces/ServiceInterfaces';
+import { pineconeService } from '../services/pineconeService';
+import { redisService } from '../services/redisService';
+import { slackService } from '../services/slackService';
+import { SlackMessage } from '../types/SlackTypes';
 
 export interface IMessageHandler {
   canHandle(message: SlackMessage): boolean;
@@ -24,12 +27,6 @@ export class HelpMessageHandler implements IMessageHandler {
 }
 
 export class SummarizeMessageHandler implements IMessageHandler {
-  private serviceFactory: ServiceFactory;
-
-  constructor() {
-    this.serviceFactory = ServiceFactory.getInstance();
-  }
-
   canHandle(message: SlackMessage): boolean {
     return message.text.toLowerCase().includes('!summarize');
   }
@@ -44,7 +41,6 @@ export class SummarizeMessageHandler implements IMessageHandler {
         return;
       }
 
-      const slackService: ISlackService = this.serviceFactory.getSlackService();
       const threadMessages = await slackService.getThreadMessages(
         message.channel,
         message.thread_ts,
@@ -65,12 +61,6 @@ export class SummarizeMessageHandler implements IMessageHandler {
 }
 
 export class QuestionMessageHandler implements IMessageHandler {
-  private serviceFactory: ServiceFactory;
-
-  constructor() {
-    this.serviceFactory = ServiceFactory.getInstance();
-  }
-
   canHandle(message: SlackMessage): boolean {
     return message.text.toLowerCase().endsWith('?');
   }
@@ -80,10 +70,9 @@ export class QuestionMessageHandler implements IMessageHandler {
       const questionEmbedding = await createEmbedding(message.text);
 
       // Check Redis first
-      const redisService: IRedisService = this.serviceFactory.getRedisService();
-      const redisSimilar = await redisService.findSimilarQuestions(questionEmbedding);
+      const redisSimilar: QAMatch[] = await redisService.findSimilarQuestions(questionEmbedding);
       const bestRedisMatch = redisSimilar[0];
-
+      console.log('Best Redis match:', bestRedisMatch);
       if (bestRedisMatch && bestRedisMatch.score > AI_CONFIG.MATCH_SCORE) {
         await say({
           text: `I found a similar question in cache! Here's the answer:\n${bestRedisMatch.response}`,
@@ -93,8 +82,8 @@ export class QuestionMessageHandler implements IMessageHandler {
       }
 
       // Check Pinecone next
-      const pineconeService: IPineconeService = this.serviceFactory.getPineconeService();
-      const similarQuestions = await pineconeService.findSimilarQuestions(questionEmbedding);
+      const similarQuestions: QAMatch[] =
+        await pineconeService.findSimilarQuestions(questionEmbedding);
       const bestMatch = similarQuestions[0];
 
       if (bestMatch && bestMatch.score > AI_CONFIG.MATCH_SCORE) {

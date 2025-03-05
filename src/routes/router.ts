@@ -25,8 +25,7 @@ const router: Router = express.Router();
 router.get('/health', async (_: Request, res: Response) => {
   try {
     // Check Slack connection
-    const slackBot = slackService.getClient();
-    const slackStatus = slackBot ? await slackBot.client.auth.test().catch(() => null) : null;
+    const slackStatus = await slackService.checkHealth();
 
     // Check Redis connection
     const redisStatus = await redisService.checkHealth();
@@ -55,7 +54,7 @@ router.get('/health', async (_: Request, res: Response) => {
       services.redis === 'connected';
 
     res.status(isHealthy ? 200 : 503).json(health);
-  } catch (error: any) {
+  } catch (error) {
     console.log('Health check failed:', error);
     const unhealthyStatus: HealthStatus = {
       status: 'unhealthy',
@@ -66,7 +65,7 @@ router.get('/health', async (_: Request, res: Response) => {
         redis: 'disconnected',
         pinecone: 'disconnected',
       },
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     };
     res.status(503).json(unhealthyStatus);
   }

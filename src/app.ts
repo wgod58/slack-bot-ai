@@ -1,16 +1,18 @@
 import 'dotenv/config';
+
 import express, { Express } from 'express';
 
 import router from './routes/router';
-import { ServiceFactory } from './factories/ServiceFactory';
+import { mongoService } from './services/mongoService';
+import { redisService } from './services/redisService';
+import { slackService } from './services/slackService';
 
 export class App {
   private server: Express;
-  private serviceFactory: ServiceFactory;
 
   constructor() {
     this.server = express();
-    this.serviceFactory = ServiceFactory.getInstance();
+
     // Setup basic middleware
     this.server.use(express.json());
   }
@@ -20,7 +22,21 @@ export class App {
       this.server.use('/api', router);
 
       // Initialize all services
-      await this.serviceFactory.initializeServices();
+      await mongoService.connect();
+      console.log('MongoDB connected successfully');
+
+      // Initialize Redis
+      await redisService.createVectorIndex();
+      console.log('Redis vector index created successfully');
+
+      // Initialize Slack
+      const slackBot = slackService.initialize();
+      await slackBot.start();
+      console.log('Slack bot is running!');
+
+      // Setup Slack listeners
+      await slackService.setupListeners();
+      console.log('Slack listeners setup successfully');
 
       return this;
     } catch (error) {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, jest, test } from '@jest/globals';
+import { afterAll, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
 import {
   AI_CONFIG,
@@ -8,7 +8,7 @@ import {
   RESPONSES,
   SERVER_CONFIG,
   SLACK_CONFIG,
-} from '../../src/constants/config.js';
+} from '../../src/constants/config.ts';
 
 describe('Config Constants', () => {
   describe('AI_CONFIG', () => {
@@ -125,7 +125,7 @@ describe('Config Constants', () => {
       delete process.env.REDIS_HOST;
 
       // Re-import to test defaults
-      const { SERVER_CONFIG, REDIS_CONFIG } = require('../../src/constants/config.js');
+      const { SERVER_CONFIG, REDIS_CONFIG } = require('../../src/constants/config.ts');
 
       expect(SERVER_CONFIG.PORT).toBe(3000);
       expect(REDIS_CONFIG.HOST).toBe('localhost');
