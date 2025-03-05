@@ -137,8 +137,3 @@ class OpenAIService implements IOpenAIService {
 
 // Export singleton instance
 export const openaiService = OpenAIService.getInstance();
-
-// Export convenience methods
-export const generateSummary = (messages: string) => openaiService.generateSummary(messages);
-export const generateResponse = (question: string) => openaiService.generateResponse(question);
-export const createEmbedding = (text: string) => openaiService.createEmbedding(text);

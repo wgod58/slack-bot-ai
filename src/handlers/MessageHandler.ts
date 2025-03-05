@@ -2,7 +2,7 @@ import { SayFn } from '@slack/bolt';
 
 import { AI_CONFIG, RESPONSES } from '../constants/config';
 import { QAMatch } from '../interfaces/ServiceInterfaces';
-import { createEmbedding, generateResponse, generateSummary } from '../services/openaiService';
+import { openaiService } from '../services/openaiService';
 import { pineconeService } from '../services/pineconeService';
 import { redisService } from '../services/redisService';
 import { slackService } from '../services/slackService';
@@ -45,7 +45,7 @@ export class SummarizeMessageHandler implements IMessageHandler {
         message.channel,
         message.thread_ts,
       );
-      const summary = await generateSummary(threadMessages.join('\n'));
+      const summary = await openaiService.generateSummary(threadMessages.join('\n'));
       await say({
         text: summary,
         thread_ts: message.thread_ts,
@@ -67,7 +67,7 @@ export class QuestionMessageHandler implements IMessageHandler {
 
   async handle(message: SlackMessage, say: SayFn): Promise<void> {
     try {
-      const questionEmbedding = await createEmbedding(message.text);
+      const questionEmbedding = await openaiService.createEmbedding(message.text);
 
       // Check Redis first
       const redisSimilar: QAMatch[] = await redisService.findSimilarQuestions(questionEmbedding);
@@ -95,7 +95,7 @@ export class QuestionMessageHandler implements IMessageHandler {
       }
 
       // Generate new response if no match found
-      const response = await generateResponse(message.text);
+      const response = await openaiService.generateResponse(message.text);
       await say({
         text: response,
         thread_ts: message.thread_ts || message.ts,
