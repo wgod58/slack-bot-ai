@@ -5,7 +5,7 @@ import {
   IMessageHandler,
   QuestionMessageHandler,
   SummarizeMessageHandler,
-} from '../handlers/MessageHandler';
+} from '../handlers/messageHandler';
 import { SlackMessage } from '../types/slackType';
 // Singleton factory class for creating message handlers
 interface IMessageHandlerFactory {
