@@ -9,7 +9,6 @@ package-lock.json
 .env.*.local
 .env.development
 .env.production
-.env.test
 pinecone.key
 
 # Logs

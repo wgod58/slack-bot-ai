@@ -16,14 +16,14 @@ export const RESPONSES = {
 • \`!help\` - Show this help message
 • Say hello`,
 
-  DEFAULT: (text) => `I received your message: "${text}"
-Need help? Try \`!help\` for a list of commands`,
+  DEFAULT: (text: string) =>
+    `I received your message: "${text}" Need help? Try \`!help\` for a list of commands`,
 
   ERROR: 'Sorry, I encountered an error processing your request.',
   QUESTION_ERROR: "I'm having trouble answering your question right now. Please try again later.",
 
   NO_SIMILAR: "I couldn't find any similar questions in my memory.",
-  SIMILAR_QUESTIONS: (questions) =>
+  SIMILAR_QUESTIONS: (questions: { question: string; response: string }[]) =>
     `Here are similar questions I've answered before:\n${questions
       .map((q, i) => `${i + 1}. Q: ${q.question}\nA: ${q.response}`)
       .join('\n\n')}`,
@@ -78,7 +78,13 @@ export const REDIS_CONFIG = {
   },
 };
 
-export const MONGODB_CONFIG = {
+export const MONGODB_CONFIG: {
+  URI: string | undefined;
+  DB_NAME: string | undefined;
+  USERNAME: string | undefined;
+  PASSWORD: string | undefined;
+  OPTIONS: string | undefined;
+} = {
   URI: process.env.ORMONGO_RS_URL,
   DB_NAME: process.env.MONGODB_DB_NAME,
   USERNAME: process.env.MONGODB_USERNAME,
