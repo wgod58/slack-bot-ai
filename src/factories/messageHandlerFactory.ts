@@ -36,7 +36,10 @@ export class MessageHandlerFactory implements IMessageHandlerFactory {
 
   public getHandler(message: SlackMessage): IMessageHandler {
     const handler = this.handlers.find((handler) => handler.canHandle(message));
-    return handler as IMessageHandler;
+    if (!handler) {
+      throw new Error('No handler found for message');
+    }
+    return handler;
   }
 }
 
