@@ -1,12 +1,12 @@
 import { SayFn } from '@slack/bolt';
 
 import { AI_CONFIG, RESPONSES } from '../constants/config';
-import { QAMatch } from '../interfaces/ServiceInterfaces';
+import { QAMatch } from '../interfaces/serviceInterfaces';
 import { openaiService } from '../services/openaiService';
 import { pineconeService } from '../services/pineconeService';
 import { redisService } from '../services/redisService';
 import { slackService } from '../services/slackService';
-import { SlackMessage } from '../types/SlackTypes';
+import { SlackMessage } from '../types/slackType';
 
 export interface IMessageHandler {
   canHandle(message: SlackMessage): boolean;

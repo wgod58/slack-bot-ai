@@ -1,6 +1,6 @@
 import { App, Receiver, SayFn } from '@slack/bolt';
 
-import { SlackMessage } from '../types/SlackTypes';
+import { SlackMessage } from '../types/slackType';
 
 export interface QAMatch {
   response: string;
