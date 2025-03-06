@@ -1,7 +1,7 @@
 import { OpenAI } from 'openai';
 
 import { AI_CONFIG, RESPONSES } from '../constants/config';
-import { IOpenAIService } from '../interfaces/ServiceInterfaces';
+import { IOpenAIService } from '../interfaces/serviceInterfaces';
 import { mongoService } from './mongoService';
 import { redisService } from './redisService';
 

@@ -1,7 +1,7 @@
 import { Pinecone, QueryResponse, RecordMetadata } from '@pinecone-database/pinecone';
 
 import { PINECONE_CONFIG } from '../constants/config';
-import { IPineconeService, QAMatch } from '../interfaces/ServiceInterfaces';
+import { IPineconeService, QAMatch } from '../interfaces/serviceInterfaces';
 
 interface QAMetadata {
   question: string;

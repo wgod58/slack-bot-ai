@@ -1,7 +1,7 @@
 import Redis, { RedisOptions } from 'ioredis';
 
 import { REDIS_CONFIG } from '../constants/config';
-import { IRedisService, QAMatch } from '../interfaces/ServiceInterfaces';
+import { IRedisService, QAMatch } from '../interfaces/serviceInterfaces';
 
 interface RedisSearchResult {
   id: string; // Assuming the ID of the document

@@ -1,7 +1,7 @@
 import { Db, MongoClient, ServerApiVersion } from 'mongodb';
 
 import { MONGODB_CONFIG } from '../constants/config';
-import { IMongoService } from '../interfaces/ServiceInterfaces';
+import { IMongoService } from '../interfaces/serviceInterfaces';
 
 class MongoService implements IMongoService {
   private static instance: IMongoService;

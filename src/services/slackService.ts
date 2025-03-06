@@ -1,9 +1,9 @@
 import { App, AppOptions, Receiver, SayFn } from '@slack/bolt';
 
 import { RESPONSES, SLACK_CONFIG } from '../constants/config';
-import { messageHandlerFactory } from '../factories/MessageHandlerFactory';
-import { ISlackService } from '../interfaces/ServiceInterfaces';
-import { SlackMessage, ThreadMessage } from '../types/SlackTypes';
+import { messageHandlerFactory } from '../factories/messageHandlerFactory';
+import { ISlackService } from '../interfaces/serviceInterfaces';
+import { SlackMessage, ThreadMessage } from '../types/slackTypes';
 
 class SlackService implements ISlackService {
   private static instance: ISlackService;
