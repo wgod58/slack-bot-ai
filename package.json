@@ -17,7 +17,7 @@
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write .",
     "fix": "yarn run format && yarn run lint:fix",
-    "build": "tsc",
+    "build": "tsc --outDir dist",
     "clean": "rm -rf node_modules dist",
     "prepare": "husky install"
   },
