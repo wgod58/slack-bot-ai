@@ -3,14 +3,14 @@ import Redis, { RedisOptions } from 'ioredis';
 import { REDIS_CONFIG } from '../constants/config';
 import { IRedisService, QAMatch } from '../interfaces/serviceInterfaces';
 
-interface RedisSearchResult {
+type RedisSearchResult = {
   id: string; // Assuming the ID of the document
   fields: {
     text: string;
     response: string;
     vector_score: string; // Assuming this is a string; adjust if it's a number
   };
-}
+};
 
 class RedisService implements IRedisService {
   private static instance: IRedisService;

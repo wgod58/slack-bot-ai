@@ -10,11 +10,13 @@ A sophisticated Slack bot that leverages OpenAI's GPT-4, Redis Stack, and Pineco
 - Vector similarity search in Redis and Pinecone
 - Thread summarization capabilities
 - Performance optimization with dual-layer caching
+- Type-safe implementation with TypeScript
 
 ## Technology Stack
 
 ### Core Technologies
 
+- TypeScript
 - NodeJs (≥18.18.0)
 - Express
 - Slack Bolt Framework
@@ -26,12 +28,28 @@ A sophisticated Slack bot that leverages OpenAI's GPT-4, Redis Stack, and Pineco
 
 ### Development Tools
 
-- Babel (ES6+ support)
-- ESLint & Prettier
+- TypeScript
+- ts-node (TypeScript execution)
+- ts-jest (TypeScript testing)
+- ESLint & Prettier with TypeScript support
 - Jest (Testing)
 - Husky (Git hooks)
 - GitHub Actions (CI/CD)
 - Heroku (Deployment)
+
+## Design Patterns
+
+### 1. Singleton Pattern
+
+- Implemented in core services (OpenAI, Redis, MongoDB, Pinecone, Slack)
+- Ensures single instance of service clients
+- Manages shared resources and connections efficiently
+
+### 2. Factory Pattern
+
+- Implemented in message handling system
+- Creates appropriate handlers for different message types (Help, Summarize, Question, Greeting)
+- Facilitates easy extension of message handling capabilities through `MessageHandlerFactory`
 
 ## Architecture
 
@@ -192,21 +210,23 @@ graph TD
 
 1. Clone the repository:
 
-```
+```bash
 git clone https://github.com/wgod58/slack-bot.git
 cd slack-bot
 ```
 
 2. Install dependencies:
 
-```
+```bash
 yarn install
 ```
 
 3. Create a `.env` file and set the following environment variables:
 
-```
+```env
 SLACK_BOT_TOKEN=
+SLACK_SIGNING_SECRET=
+SLACK_APP_TOKEN=
 OPENAI_API_KEY=
 PINECONE_API_KEY=
 PINECONE_INDEX_NAME=
@@ -214,11 +234,28 @@ REDIS_HOST=
 REDIS_USERNAME=
 REDIS_PASSWORD=
 REDIS_PORT=
-PORT=8080
+ORMONGO_RS_URL=
+MONGODB_DB_NAME=
+MONGODB_USERNAME=
+MONGODB_PASSWORD=
+MONGODB_OPTIONS=
+PORT=3000
 ```
 
-4. Start the server:
+4. Start the development server:
 
+```bash
+yarn dev
 ```
+
+5. Build for production:
+
+```bash
+yarn build
+```
+
+6. Start production server:
+
+```bash
 yarn start
 ```
